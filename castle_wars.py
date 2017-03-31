@@ -262,7 +262,7 @@ class Army(object):
         """
         if self.target:
             for unit in self.units:
-                if unit.target and unit.target.hp == 0:
+                if unit.target and unit.target.hp == 0 and not isinstance(unit.target, Castle):
                     unit.set_target(random.choice(self.target.units))
 
     def get_enemy_army_in_position(self, position, enemy_armies):
@@ -510,6 +510,7 @@ class CivilizationsFight(object):
                     army.remove_dead_units()
                 player.remove_dead_armies()
 
+            self.check_game_over()
             # small sleep to simulate animation
             time.sleep(1/TIME_TICKS_PER_TURN)
             self.set_income()
@@ -541,6 +542,21 @@ class CivilizationsFight(object):
         for unit in army.units:
             unit.attack()
         army.refresh_units_target()
+
+    def check_game_over(self):
+        """ Check if any castle has hp equals 0.
+        If yes, game must be ended
+        """
+        if self.castles['player'].hp == 0:
+            os.system('clear')
+            print("You loose!\n")
+            input("Press Enter to exit")
+            self.exit()
+        if self.castles['computer'].hp == 0:
+            os.system('clear')
+            print("You win!\n")
+            input("Press Enter to exit")
+            self.exit()
 
     def exit(self):
         sys.exit(0)
