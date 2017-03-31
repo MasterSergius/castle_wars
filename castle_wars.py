@@ -56,7 +56,7 @@ UNIT_UPGRADE_PRICES = {'hp': 100,
                        'attack_speed': 100,
                        'regen': 100}
 
-CASTLE_UPGRADES = {'income': 5,
+CASTLE_UPGRADES = {'income': 10,
                    'dmg': 1,
                    'regen': 1}
 
@@ -181,6 +181,9 @@ class Player(object):
         alive = [army for army in self.armies if army.units]
         self.armies = alive[:]
 
+    def add_gold(self, gold):
+        self.gold += gold
+
 
 class Unit(GameObject):
     def __init__(self, hp=UNIT_HP, dmg=UNIT_DMG, speed=UNIT_SPD,
@@ -194,6 +197,7 @@ class Unit(GameObject):
         self.regen = regen
         self.attack_rate = ATTACK_RATE if ATTACK_RATE > self.attack_speed else self.attack_speed
         self.target = None
+        self.gold_reward = gold_reward
 
     def set_target(self, target):
         self.target = target
@@ -211,13 +215,14 @@ class Unit(GameObject):
 
 class Army(object):
     def __init__(self, position=0, movement=0, units=None,
-                 enemy_castle = None):
+                 enemy_castle=None, enemy=None):
         self.position = position
         self.movement = movement
         self.units = None
         self.speed = 0
         self.target = None
         self.enemy_castle = enemy_castle
+        self.enemy = enemy
         if units:
             self.units = units[:]
             #Consider scenario when players can upgrade units speed
@@ -287,8 +292,20 @@ class Army(object):
             unit.refresh_attack_rate()
 
     def remove_dead_units(self):
-        alive = [unit for unit in self.units if unit.hp > 0]
+        alive = []
+        dead = 0
+        for unit in self.units:
+            if unit.hp > 0:
+                alive.append(unit)
+            else:
+                self.give_gold_reward(unit.gold_reward)
+                dead += 1
         self.units = alive[:]
+        self.enemy.kills += dead
+        return dead
+
+    def give_gold_reward(self, gold):
+        self.enemy.add_gold(gold)
 
     def regen_units(self):
         for unit in self.units:
@@ -448,8 +465,8 @@ class CivilizationsFight(object):
 
     def computer_turn(self):
         # setup strategy
-        strategy = {50:'spawn', 80:'income',
-                    85:'unit_hp', 90:'unit_dmg',
+        strategy = {40:'spawn', 65:'income',
+                    75:'unit_hp', 85:'unit_dmg',
                     95:'unit_attack_speed', 100:'unit_regen'}
         if self.computer.castle.hp < CASTLE_HP * 0.8:
             strategy = {40:'spawn', 70:'income',
@@ -497,10 +514,13 @@ class CivilizationsFight(object):
                     movement = PLAYER_MOVEMENTS[player_name]
                     if player_name == 'player':
                         enemy_castle = self.castles['computer']
+                        enemy = self.computer
                     else:
                         enemy_castle = self.castles['player']
+                        enemy = self.player
                     new_army = Army(position=position, movement=movement,
-                                    units=units, enemy_castle=enemy_castle)
+                                    units=units, enemy_castle=enemy_castle,
+                                    enemy=enemy)
                     player.armies.append(new_army)
 
                 # get list of enemy armies
@@ -522,7 +542,8 @@ class CivilizationsFight(object):
             for player in self.players.values():
                 for army in player.armies:
                     # remove dead units and armies
-                    army.remove_dead_units()
+                    dead = army.remove_dead_units()
+                    self.player.deaths += dead
                 player.remove_dead_armies()
 
             self.check_game_over()
