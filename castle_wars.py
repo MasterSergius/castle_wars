@@ -9,6 +9,9 @@ import random
 import sys
 import time
 
+from abc import ABCMeta, abstractmethod
+
+
 HOME_PIC = "|^|"
 PLAYER_PIC = "%s>"
 ENEMY_PIC = "<%s"
@@ -45,7 +48,7 @@ UNIT_UPGRADES = {'hp': 5,
                  'dmg': 1,
                  'speed': 1,
                  'attack_speed': 0.5,
-                 'regen': 0.5}
+                 'regen': 1}
 
 UNIT_UPGRADE_PRICES = {'hp': 100,
                        'dmg': 100,
@@ -88,17 +91,28 @@ def put_substr_in_position(substr, pos, string):
     return string[:pos] + substr + string[pos+len(substr):]
 
 
-class Castle(object):
-    def __init__(self, hp=CASTLE_HP, dmg=0, regen=0, position=0):
-        self.hp = hp
-        self.position = position
-        self.dmg = dmg
-        self.regen = 0
+class GameObject(metaclass=ABCMeta):
+    @abstractmethod
+    def __init__(self):
+        pass
 
     def get_damage(self, damage):
         self.hp -= damage
         if self.hp < 0:
             self.hp = 0
+
+    def regenerate(self):
+        if self.hp < self.max_hp:
+            self.hp += self.regen
+
+
+class Castle(GameObject):
+    def __init__(self, hp=CASTLE_HP, dmg=0, regen=0, position=0):
+        self.hp = hp
+        self.max_hp = hp
+        self.position = position
+        self.dmg = dmg
+        self.regen = 0
 
 
 class Player(object):
@@ -167,11 +181,13 @@ class Player(object):
         alive = [army for army in self.armies if army.units]
         self.armies = alive[:]
 
-class Unit(object):
+
+class Unit(GameObject):
     def __init__(self, hp=UNIT_HP, dmg=UNIT_DMG, speed=UNIT_SPD,
                  attack_speed=UNIT_ATSPD, regen=UNIT_REGEN,
                  gold_reward=REWARD_FOR_KILLING):
         self.hp = hp
+        self.max_hp = hp
         self.dmg = dmg
         self.speed = speed
         self.attack_speed = attack_speed
@@ -191,11 +207,6 @@ class Unit(object):
 
     def refresh_attack_rate(self):
         self.attack_rate = ATTACK_RATE if ATTACK_RATE > self.attack_speed else self.attack_speed
-
-    def get_damage(self, damage):
-        self.hp -= damage
-        if self.hp < 0:
-            self.hp = 0
 
 
 class Army(object):
@@ -278,6 +289,10 @@ class Army(object):
     def remove_dead_units(self):
         alive = [unit for unit in self.units if unit.hp > 0]
         self.units = alive[:]
+
+    def regen_units(self):
+        for unit in self.units:
+            unit.regenerate()
 
     @property
     def hp(self):
@@ -505,8 +520,8 @@ class CivilizationsFight(object):
                                                               army.position,
                                                               self.health_line)
             for player in self.players.values():
-                # remove dead units and armies
                 for army in player.armies:
+                    # remove dead units and armies
                     army.remove_dead_units()
                 player.remove_dead_armies()
 
@@ -515,6 +530,14 @@ class CivilizationsFight(object):
             time.sleep(1/TIME_TICKS_PER_TURN)
             self.set_income()
             self.draw_scene()
+
+        # regenerate units' and castles' hp after each turn
+        for player in self.players.values():
+            for army in player.armies:
+                # regenerate units' hp
+                army.regen_units()
+            # regenerate castle's hp
+            player.castle.regenerate()
 
     def set_income(self):
         highest_player_position = 0
