@@ -47,7 +47,7 @@ ATTACK_RATE = 5
 UNIT_UPGRADES = {'hp': 5,
                  'dmg': 1,
                  'speed': 1,
-                 'attack_speed': 0.5,
+                 'attack_speed': 0.2,
                  'regen': 1}
 
 UNIT_UPGRADE_PRICES = {'hp': 100,
@@ -72,8 +72,18 @@ BONUS_UPGRADE_POISON = 200
 BONUS_UPGRADE_STUN = 200
 BONUS_UPGRADE_EVASION = 200
 
+# All costs for computer strategy
+COSTS = {'spawn': SPAWN_COST, 'unit_hp': UNIT_UPGRADE_PRICES['hp'],
+         'unit_dmg': UNIT_UPGRADE_PRICES['dmg'],
+         'unit_attack_speed': UNIT_UPGRADE_PRICES['attack_speed'],
+         'unit_regen': UNIT_UPGRADE_PRICES['regen'],
+         'income': CASTLE_UPGRADE_PRICES['income'],
+         'castle_dmg': CASTLE_UPGRADE_PRICES['dmg'],
+         'castle_regen': CASTLE_UPGRADE_PRICES['regen']}
 
+#TODO: remove log function
 def log(string):
+    """ Temporary logging for dev/debug purposes """
     with open('/tmp/castle_wars.log', 'a') as f:
         f.write(string)
 
@@ -86,6 +96,30 @@ def help():
     You get 2 gold for each piece of land you own.
     """
     return help_string
+
+def convert_percentage(percentage):
+    """ Build correct dict for random choice from percentage """
+    strategy = {}
+    number = 0
+    for action in sorted(percentage, key=percentage.get):
+        number += percentage[action]
+        strategy[number] = action
+        if number > 100:
+            os.system('clear')
+            print('Incorrect computer strategy.')
+            input('Press Enter to exit.')
+            sys.exit(0)
+    return strategy
+
+def build_computer_strategy(percentage, gold):
+    """Filters possible actions. Leave only those which are affordable."""
+    total_percentage = 0
+    filtered_percentage = {}
+    for action, percent in percentage.items():
+        if COSTS[action] <= gold:
+            filtered_percentage[action] = percent
+            total_percentage += percent
+    return (convert_percentage(filtered_percentage), total_percentage)
 
 def put_substr_in_position(substr, pos, string):
     return string[:pos] + substr + string[pos+len(substr):]
@@ -318,7 +352,8 @@ class Army(object):
             units_health += unit.hp
         return units_health
 
-class CivilizationsFight(object):
+
+class CastleWars(object):
 
     def __init__(self):
         self.castle_player = Castle(position=0)
@@ -463,39 +498,58 @@ class CivilizationsFight(object):
             if random_number <= key:
                 return strategy[key]
 
-    def computer_turn(self):
+    def computer_action(self):
+        if self.computer.gold < 100:
+            return False
         # setup strategy
-        strategy = {40:'spawn', 65:'income',
-                    75:'unit_hp', 85:'unit_dmg',
-                    95:'unit_attack_speed', 100:'unit_regen'}
+        percentage = {'spawn':35, 'income':30, 'unit_hp':10, 'unit_dmg':10,
+                      'unit_attack_speed':10, 'unit_regen':5}
+        if self.computer.spawns == 0:
+            percentage = {'spawn':100}
+        elif self.computer.unit_hp_lvl < 4:
+            percentage = {'spawn':30, 'income':35, 'unit_hp':15,
+                          'unit_dmg':10, 'unit_attack_speed':10}
+        elif self.computer.spawns > 2:
+            percentage = {'spawn':10, 'income':35, 'unit_hp':15,
+                          'unit_dmg':20, 'unit_attack_speed':15,
+                          'unit_regen':5}
+
+        # castle rescue
         if self.computer.castle.hp < CASTLE_HP * 0.8:
-            strategy = {40:'spawn', 70:'income',
-                        75:'castle_dmg', 80:'castle_regen',
-                        85:'unit_hp', 90:'unit_dmg',
-                        95:'unit_attack_speed', 100:'unit_regen'}
+            percentage = {'spawn':30, 'income':30, 'unit_hp':5,
+                          'unit_dmg':5, 'unit_attack_speed':5,
+                          'unit_regen':5, 'castle_dmg':10, 'castle_regen':10}
         if self.computer.castle.hp < CASTLE_HP * 0.4:
-            strategy = {40:'income', 70:'castle_regen',
-                        80:'castle_dmg',
-                        85:'unit_hp', 90:'unit_dmg',
-                        95:'unit_attack_speed', 100:'unit_regen'}
-        while self.computer.gold > self.computer.spawns * self.computer.unit_price + 200:
-            choice = self.computer_choice(random.randint(1,100), strategy)
-            if choice == 'spawn':
-                self.build_spawn('computer')
-            elif choice == 'unit_hp':
-                self.upgrade_units_attr('computer', 'hp')
-            elif choice == 'unit_dmg':
-                self.upgrade_units_attr('computer', 'dmg')
-            elif choice == 'unit_attack_speed':
-                self.upgrade_units_attr('computer', 'attack_speed')
-            elif choice == 'unit_regen':
-                self.upgrade_units_attr('computer', 'regen')
-            elif choice == 'income':
-                self.upgrade_castle_attr('computer', 'income')
-            elif choice == 'castle_dmg':
-                self.upgrade_castle_attr('computer', 'dmg')
-            elif choice == 'castle_regen':
-                self.upgrade_castle_attr('computer', 'regen')
+            percentage = {'spawn':10, 'income':20, 'unit_hp':5,
+                          'unit_dmg':5, 'unit_attack_speed':5,
+                          'unit_regen':5, 'castle_dmg':25, 'castle_regen':25}
+        strategy, max_rand = build_computer_strategy(percentage, self.computer.gold)
+
+        choice = self.computer_choice(random.randint(1,max_rand), strategy)
+        if choice == 'spawn':
+            self.build_spawn('computer')
+        elif choice == 'unit_hp':
+            self.upgrade_units_attr('computer', 'hp')
+        elif choice == 'unit_dmg':
+            self.upgrade_units_attr('computer', 'dmg')
+        elif choice == 'unit_attack_speed':
+            self.upgrade_units_attr('computer', 'attack_speed')
+        elif choice == 'unit_regen':
+            self.upgrade_units_attr('computer', 'regen')
+        elif choice == 'income':
+            self.upgrade_castle_attr('computer', 'income')
+        elif choice == 'castle_dmg':
+            self.upgrade_castle_attr('computer', 'dmg')
+        elif choice == 'castle_regen':
+            self.upgrade_castle_attr('computer', 'regen')
+        return True
+
+    def computer_turn(self):
+        costs = self.computer.spawns * self.computer.unit_price
+        while self.computer.gold + self.computer.income > costs:
+            success = self.computer_action()
+            if not success:
+                break
 
     def finish_turn(self):
         enemy_armies = []
@@ -618,5 +672,7 @@ class CivilizationsFight(object):
             self.computer_turn()
             self.finish_turn()
 
-game = CivilizationsFight()
-game.start()
+
+if __name__ == "__main__":
+    game = CastleWars()
+    game.start()
