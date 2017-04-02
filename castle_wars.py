@@ -23,7 +23,7 @@ LAND = "_" * DISTANCE + '_' * len(HOME_PIC) * 2
 HEALTH_LINE = ' ' * len(LAND)
 
 TIME_TICKS_PER_TURN = 15
-SPAWN_RATE = TIME_TICKS_PER_TURN * 2
+SPAWN_RATE = TIME_TICKS_PER_TURN * 3
 
 CASTLE_HP = 10000
 
@@ -58,7 +58,7 @@ UNIT_UPGRADE_PRICES = {'hp': 100,
 
 CASTLE_UPGRADES = {'income': 10,
                    'dmg': 1,
-                   'regen': 1}
+                   'regen': 10}
 
 CASTLE_UPGRADE_PRICES = {'income': 100,
                          'dmg': 300,
@@ -435,7 +435,7 @@ class CastleWars(object):
                                      self.players[player].unit_hp_lvl))
         print("dmg: %s (%s level)" % (self.players[player].unit_dmg,
                                       self.players[player].unit_dmg_lvl))
-        print("attack speed: %s (%s level)" % (self.players[player].unit_attack_speed,
+        print("attack speed: %.1f (%s level)" % (self.players[player].unit_attack_speed,
                                                self.players[player].unit_attack_speed_lvl))
         print("regen: %s (%s level)" % (self.players[player].unit_regen,
                                         self.players[player].unit_regen_lvl))
@@ -507,7 +507,7 @@ class CastleWars(object):
             self.players[player].__dict__["castle_%s_lvl" % attr] += 1
             self.players[player].__dict__["castle_%s" % attr] += CASTLE_UPGRADES[attr]
             self.players[player].gold -= CASTLE_UPGRADE_PRICES[attr];
-            self.castles[player].__dict__[attr] += 1
+            self.castles[player].__dict__[attr] += CASTLE_UPGRADES[attr]
             if attr == 'income':
                 self.players[player].income += CASTLE_UPGRADES['income']
         else:
