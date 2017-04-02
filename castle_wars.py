@@ -25,7 +25,7 @@ HEALTH_LINE = ' ' * len(LAND)
 TIME_TICKS_PER_TURN = 15
 SPAWN_RATE = TIME_TICKS_PER_TURN * 2
 
-CASTLE_HP = 5000
+CASTLE_HP = 10000
 
 UNIT_HP = 5
 UNIT_DMG = 1
@@ -124,6 +124,12 @@ def build_computer_strategy(percentage, gold):
 def put_substr_in_position(substr, pos, string):
     return string[:pos] + substr + string[pos+len(substr):]
 
+def get_enemy_army_in_position(position, enemy_armies):
+    for army in enemy_armies:
+        if position == army.position:
+            return army
+    return None
+
 
 class GameObject(metaclass=ABCMeta):
     @abstractmethod
@@ -141,12 +147,38 @@ class GameObject(metaclass=ABCMeta):
 
 
 class Castle(GameObject):
-    def __init__(self, hp=CASTLE_HP, dmg=0, regen=0, position=0):
+    def __init__(self, hp=CASTLE_HP, dmg=0, regen=0, position=0, direction=0):
         self.hp = hp
         self.max_hp = hp
         self.position = position
         self.dmg = dmg
         self.regen = 0
+        self.income = 0
+        self.direction = direction
+        self.target = None
+
+    def has_target(self):
+        return self.target
+
+    def get_target(self, enemy_armies):
+        """ Find target for army to fight with.
+            Preferable target - enemy's army.
+        """
+        self.target = get_enemy_army_in_position(self.position, enemy_armies)
+        if not self.target:
+            self.target = get_enemy_army_in_position(self.position+self.direction, enemy_armies)
+        if not self.target:
+            self.target = None
+            return False
+        return True
+
+    def attack(self):
+        """ Castle do damage to all units in army """
+        if self.has_target():
+            for unit in self.target.units:
+                unit.get_damage(self.dmg)
+            if self.target.hp == 0:
+                self.target = None
 
 
 class Player(object):
@@ -283,9 +315,9 @@ class Army(object):
         """ Find target for army to fight with.
             Preferable target - enemy's army.
         """
-        self.target = self.get_enemy_army_in_position(self.position, enemy_armies)
+        self.target = get_enemy_army_in_position(self.position, enemy_armies)
         if not self.target:
-            self.target = self.get_enemy_army_in_position(self.position+self.movement, enemy_armies)
+            self.target = get_enemy_army_in_position(self.position+self.movement, enemy_armies)
             if self.target:
                 for unit in self.units:
                     unit.set_target(random.choice(self.target.units))
@@ -314,12 +346,6 @@ class Army(object):
             for unit in self.units:
                 if unit.target and unit.target.hp == 0 and not isinstance(unit.target, Castle):
                     unit.set_target(random.choice(self.target.units))
-
-    def get_enemy_army_in_position(self, position, enemy_armies):
-        for army in enemy_armies:
-            if position == army.position:
-                return army
-        return None
 
     def refresh_attack_rate(self):
         for unit in self.units:
@@ -356,9 +382,9 @@ class Army(object):
 class CastleWars(object):
 
     def __init__(self):
-        self.castle_player = Castle(position=0)
+        self.castle_player = Castle(position=0, direction=1)
         self.player = Player(castle=self.castle_player, player_name='player')
-        self.castle_computer = Castle(position=DISTANCE+1)
+        self.castle_computer = Castle(position=DISTANCE+1, direction=-1)
         self.computer = Player(castle=self.castle_computer, player_name='computer')
         self.castles = {'player': self.castle_player, 'computer': self.castle_computer}
         self.players = {'player': self.player, 'computer': self.computer}
@@ -481,6 +507,7 @@ class CastleWars(object):
             self.players[player].__dict__["castle_%s_lvl" % attr] += 1
             self.players[player].__dict__["castle_%s" % attr] += CASTLE_UPGRADES[attr]
             self.players[player].gold -= CASTLE_UPGRADE_PRICES[attr];
+            self.castles[player].__dict__[attr] += 1
             if attr == 'income':
                 self.players[player].income += CASTLE_UPGRADES['income']
         else:
@@ -593,6 +620,10 @@ class CastleWars(object):
                     self.health_line = put_substr_in_position(str(army.hp),
                                                               army.position,
                                                               self.health_line)
+                # check if castle can attack
+                if player.castle.has_target() or player.castle.get_target(enemy_armies):
+                    player.castle.attack()
+
             for player in self.players.values():
                 for army in player.armies:
                     # remove dead units and armies
