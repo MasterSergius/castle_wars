@@ -101,18 +101,16 @@ With each time tick attack rate increases by unit's attack speed value.
 Unit must have 5 attack rate to make damage.
 
 <= Spawns =>
-Units spawn once per 3 turns and move towards enemy's castle.
-Each spawn can produce one unit, but you must have enough gold for it.
-Basic unit's price - 5 gold. Each upgrade give +1 to unit price.
+Units spawn once per 3 turns and move towards enemy's castle. Each spawn can
+produce one unit, but you must have enough gold for it. Each upgrade give +1
+to unit price. Basic unit price - 5 gold.
 
 <= Income & Gold =>
 You get income - 2 gold for each piece of land you own. You own land from
 your castle to the furthest away your army. It shown as "+" on "income line".
-Enemy's land shown as "-".
-Another income doesn't depend on how much land you own and can be upgraded via
-castle upgrades.
-Also, you get gold for killing enemy units. Each upgrade give +1 to gold reward
-for killing.
+Enemy's land shown as "-". Another income doesn't depend on how much land you
+own and can be upgraded via castle upgrades. Also, you get gold for killing
+enemy units. Each upgrade give +1 to gold reward for killing.
 
 <= Upgrades =>
 All upgrades have no limits, i.e. you can upgrade any attribute infinitely.
@@ -125,6 +123,9 @@ regenerate it's HP once per turn.
 <= Time tick & Turn =>
 Each turn consists of 15 time ticks. Thus, basic units with no upgrades can
 attack 3 times and castle - 15 times.
+
+<= Tips & Tricks =>
+You can type "b*3" to build 3 spawn at once. The same works for upgrades.
 """
     return help_string
 
@@ -490,6 +491,16 @@ class CastleWars(object):
 
     def prompt(self):
         choice = input("Your choice > ")
+        count = 1
+        if '*' in choice:
+            choice, count = choice.split('*')
+            choice = choice.strip()
+            try:
+                count = int(count)
+            except:
+                print("Wrong input!\n")
+                print("Press Enter to Continue")
+                return None
         if choice == 'q':
             self.exit()
         elif choice == 'e':
@@ -503,21 +514,29 @@ class CastleWars(object):
         elif choice == 'i':
             self.show_upgrades('computer')
         elif choice == 'b':
-            self.build_spawn('player')
+            for i in range(count):
+                self.build_spawn('player')
         elif choice == '1':
-            self.upgrade_units_attr('player', 'hp')
+            for i in range(count):
+                self.upgrade_units_attr('player', 'hp')
         elif choice == '2':
-            self.upgrade_units_attr('player', 'dmg')
+            for i in range(count):
+                self.upgrade_units_attr('player', 'dmg')
         elif choice == '3':
-            self.upgrade_units_attr('player', 'attack_speed')
+            for i in range(count):
+                self.upgrade_units_attr('player', 'attack_speed')
         elif choice == '4':
-            self.upgrade_units_attr('player', 'regen')
+            for i in range(count):
+                self.upgrade_units_attr('player', 'regen')
         elif choice == '5':
-            self.upgrade_castle_attr('player', 'income')
+            for i in range(count):
+                self.upgrade_castle_attr('player', 'income')
         elif choice == '6':
-            self.upgrade_castle_attr('player', 'dmg')
+            for i in range(count):
+                self.upgrade_castle_attr('player', 'dmg')
         elif choice == '7':
-            self.upgrade_castle_attr('player', 'regen')
+            for i in range(count):
+                self.upgrade_castle_attr('player', 'regen')
 
     def not_enough_gold(self):
         print("Not enough gold!")
