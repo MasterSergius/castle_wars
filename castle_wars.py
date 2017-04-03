@@ -57,7 +57,7 @@ UNIT_UPGRADE_PRICES = {'hp': 100,
                        'regen': 100}
 
 CASTLE_UPGRADES = {'income': 10,
-                   'dmg': 1,
+                   'dmg': 5,
                    'regen': 10}
 
 CASTLE_UPGRADE_PRICES = {'income': 100,
@@ -89,12 +89,43 @@ def log(string):
 
 def help():
     """ Returns all necessary information to play this game """
-    help_string = """ Goal: Destroy enemy's Castle.
-    Upgrades:
-    All upgrades have no limits.
-    Income:
-    You get 2 gold for each piece of land you own.
-    """
+    # TODO: use placeholders for constant values
+    help_string = """<= Goal =>
+Destroy enemy's Castle.
+
+<= Units =>
+Unit - the main object in game. Upgrading units doesn't affect spawned units,
+but new units which are about to spawn. Units move forward for one piece of
+land (cell) with each time tick or attack if it has enough attack rate.
+With each time tick attack rate increases by unit's attack speed value.
+Unit must have 5 attack rate to make damage.
+
+<= Spawns =>
+Units spawn once per 3 turns and move towards enemy's castle.
+Each spawn can produce one unit, but you must have enough gold for it.
+Basic unit's price - 5 gold. Each upgrade give +1 to unit price.
+
+<= Income & Gold =>
+You get income - 2 gold for each piece of land you own. You own land from
+your castle to the furthest away your army. It shown as "+" on "income line".
+Enemy's land shown as "-".
+Another income doesn't depend on how much land you own and can be upgraded via
+castle upgrades.
+Also, you get gold for killing enemy units. Each upgrade give +1 to gold reward
+for killing.
+
+<= Upgrades =>
+All upgrades have no limits, i.e. you can upgrade any attribute infinitely.
+
+<= Castle =>
+Castle can do damage to attackers. It targets army on cell next to Castle and
+do damage to all units in army simultaneously with each time tick. Castle can
+regenerate it's HP once per turn.
+
+<= Time tick & Turn =>
+Each turn consists of 15 time ticks. Thus, basic units with no upgrades can
+attack 3 times and castle - 15 times.
+"""
     return help_string
 
 def convert_percentage(percentage):
@@ -455,7 +486,9 @@ class CastleWars(object):
         elif choice == 'e':
             return "end_turn"
         elif choice == 'h':
-            pass
+            os.system("clear")
+            print(help()+"\n")
+            input("Press Enter to continue")
         elif choice == 's':
             self.show_upgrades('player')
         elif choice == 'i':
