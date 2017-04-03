@@ -211,6 +211,15 @@ class Castle(GameObject):
             if self.target.hp == 0:
                 self.target = None
 
+    def get_damage(self, damage):
+        """ Castle receive only half of damage """
+        damage = damage // 2
+        if damage == 0:
+            damage = 1
+        self.hp -= damage
+        if self.hp < 0:
+            self.hp = 0
+
 
 class Player(object):
     def __init__(self, castle=Castle(), player_name='player'):
@@ -644,6 +653,9 @@ class CastleWars(object):
                     enemy_armies = self.players['player'].armies
                 # check for fight
                 for army in player.armies:
+                    # enemy's army is preferable target
+                    if army.has_target() and isinstance(army.target, Castle):
+                        army.get_target(enemy_armies)
                     if army.has_target() or army.get_target(enemy_armies):
                         self.fight_tick(army)
                     else:
