@@ -32,6 +32,15 @@ class TestCastleWars(unittest.TestCase):
         self.assertEqual(sorted(expected_strategy), sorted(strategy))
         self.assertEqual(total_percentage, 65)
 
+    def test_remove_dead_units(self):
+        unit1 = Unit(hp=5, dmg=1, speed=1, attack_speed=1, regen=0, gold_reward=1)
+        unit2 = Unit(hp=0, dmg=5, speed=1, attack_speed=1, regen=0, gold_reward=5)
+        unit3 = Unit(hp=0, dmg=5, speed=1, attack_speed=1, regen=5, gold_reward=10)
+        player = Player()
+        army = Army(units=[unit1, unit2, unit2], enemy=player)
+        dead = army.remove_dead_units()
+        self.assertEqual(dead, 2)
+        self.assertEqual(player.kills, 2)
 
 if __name__ == "__main__":
     unittest.main()

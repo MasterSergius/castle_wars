@@ -47,7 +47,7 @@ ATTACK_RATE = 5
 UNIT_UPGRADES = {'hp': 5,
                  'dmg': 1,
                  'speed': 1,
-                 'attack_speed': 0.2,
+                 'attack_speed': 0.1,
                  'regen': 1}
 
 UNIT_UPGRADE_PRICES = {'hp': 100,
@@ -684,7 +684,7 @@ class CastleWars(object):
                 for army in player.armies:
                     # remove dead units and armies
                     dead = army.remove_dead_units()
-                    self.player.deaths += dead
+                    player.deaths += dead
                 player.remove_dead_armies()
 
             self.check_game_over()
