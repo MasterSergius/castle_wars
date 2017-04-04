@@ -39,7 +39,7 @@ UNIT_PRICE = 5
 REWARD_FOR_KILLING = 1
 
 # Income per one piece of land owning
-LAND_INCOME = 2
+LAND_INCOME = 5
 
 SPAWN_COST = 200
 
@@ -586,6 +586,9 @@ class CastleWars(object):
                       'unit_attack_speed':10, 'unit_regen':5}
         if self.computer.spawns == 0:
             percentage = {'spawn':100}
+        elif self.computer.income < 5000:
+            percentage = {'income':90, 'spawn':5, 'unit_hp':2, 'unit_dmg':1,
+                          'unit_attack_speed':1, 'unit_regen':1}
         elif self.computer.unit_hp_lvl < 4:
             percentage = {'spawn':30, 'income':35, 'unit_hp':15,
                           'unit_dmg':10, 'unit_attack_speed':10}
@@ -595,10 +598,10 @@ class CastleWars(object):
                           'unit_regen':5}
 
         # castle rescue
-        if self.computer.castle.hp < CASTLE_HP * 0.8:
-            percentage = {'spawn':30, 'income':30, 'unit_hp':5,
-                          'unit_dmg':5, 'unit_attack_speed':5,
-                          'unit_regen':5, 'castle_dmg':10, 'castle_regen':10}
+        if self.computer.castle.hp < CASTLE_HP * 0.9:
+            percentage = {'spawn':1, 'income':1, 'unit_hp':1,
+                          'unit_dmg':1, 'unit_attack_speed':1,
+                          'unit_regen':1, 'castle_dmg':70, 'castle_regen':24}
         if self.computer.castle.hp < CASTLE_HP * 0.4:
             percentage = {'spawn':10, 'income':20, 'unit_hp':5,
                           'unit_dmg':5, 'unit_attack_speed':5,
