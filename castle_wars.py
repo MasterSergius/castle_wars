@@ -514,63 +514,55 @@ class CastleWars(object):
         elif choice == 'i':
             self.show_upgrades('computer')
         elif choice == 'b':
-            for i in range(count):
-                self.build_spawn('player')
+            self.build_spawn('player', count=count)
         elif choice == '1':
-            for i in range(count):
-                self.upgrade_units_attr('player', 'hp')
+            self.upgrade_units_attr('player', 'hp', count=count)
         elif choice == '2':
-            for i in range(count):
-                self.upgrade_units_attr('player', 'dmg')
+            self.upgrade_units_attr('player', 'dmg', count=count)
         elif choice == '3':
-            for i in range(count):
-                self.upgrade_units_attr('player', 'attack_speed')
+            self.upgrade_units_attr('player', 'attack_speed', count=count)
         elif choice == '4':
-            for i in range(count):
-                self.upgrade_units_attr('player', 'regen')
+            self.upgrade_units_attr('player', 'regen', count=count)
         elif choice == '5':
-            for i in range(count):
-                self.upgrade_castle_attr('player', 'income')
+            self.upgrade_castle_attr('player', 'income', count=count)
         elif choice == '6':
-            for i in range(count):
-                self.upgrade_castle_attr('player', 'dmg')
+            self.upgrade_castle_attr('player', 'dmg', count=count)
         elif choice == '7':
-            for i in range(count):
-                self.upgrade_castle_attr('player', 'regen')
+            self.upgrade_castle_attr('player', 'regen', count=count)
 
     def not_enough_gold(self):
         print("Not enough gold!")
         input("Press Enter to continue")
 
-    def build_spawn(self, player):
-        if self.players[player].gold >= SPAWN_COST:
-            self.players[player].spawns += 1
-            self.players[player].gold -= SPAWN_COST;
+    def build_spawn(self, player, count=1):
+        if self.players[player].gold >= SPAWN_COST * count:
+            self.players[player].spawns += count
+            self.players[player].gold -= SPAWN_COST * count;
         else:
             self.not_enough_gold()
 
-    def upgrade_units_attr(self, player, attr):
+    def upgrade_units_attr(self, player, attr, count=1):
         """ Upgrades chosen unit's attribute.
             Unit becomes more expensive per each upgrade.
         """
-        if self.players[player].gold >= UNIT_UPGRADE_PRICES[attr]:
-            self.players[player].__dict__["unit_%s_lvl" % attr] += 1
-            self.players[player].__dict__["unit_%s" % attr] += UNIT_UPGRADES[attr]
-            self.players[player].gold -= UNIT_UPGRADE_PRICES[attr];
-            self.players[player].unit_price += 1
-            self.players[player].unit_gold_reward += 1
+        if self.players[player].gold >= UNIT_UPGRADE_PRICES[attr] * count:
+            self.players[player].__dict__["unit_%s_lvl" % attr] += count
+            self.players[player].__dict__["unit_%s" % attr] += UNIT_UPGRADES[attr] * count
+            self.players[player].gold -= UNIT_UPGRADE_PRICES[attr] * count;
+            self.players[player].unit_price += count
+            self.players[player].unit_gold_reward += count
         else:
             self.not_enough_gold()
 
-    def upgrade_castle_attr(self, player, attr):
+    def upgrade_castle_attr(self, player, attr, count=1):
         """ Upgrades chosen castle's attribute """
-        if self.players[player].gold >= CASTLE_UPGRADE_PRICES[attr]:
-            self.players[player].__dict__["castle_%s_lvl" % attr] += 1
-            self.players[player].__dict__["castle_%s" % attr] += CASTLE_UPGRADES[attr]
-            self.players[player].gold -= CASTLE_UPGRADE_PRICES[attr];
-            self.castles[player].__dict__[attr] += CASTLE_UPGRADES[attr]
+        if self.players[player].gold >= CASTLE_UPGRADE_PRICES[attr] * count:
+            self.players[player].__dict__["castle_%s_lvl" % attr] += count
+            self.players[player].__dict__["castle_%s" % attr] += CASTLE_UPGRADES[attr] * count
+            self.players[player].gold -= CASTLE_UPGRADE_PRICES[attr] * count;
+            self.castles[player].__dict__[attr] += CASTLE_UPGRADES[attr] * count
             if attr == 'income':
-                self.players[player].income += CASTLE_UPGRADES['income']
+                self.players[player].income += CASTLE_UPGRADES['income'] * count
         else:
             self.not_enough_gold()
 
