@@ -176,6 +176,8 @@ class GameObject(metaclass=ABCMeta):
     def regenerate(self):
         if self.hp < self.max_hp:
             self.hp += self.regen
+            if self.hp > self.max_hp:
+                self.hp = self.max_hp
 
 
 class Castle(GameObject):
@@ -456,7 +458,8 @@ class CastleWars(object):
         print(status_line % (self.player.gold, self.player.income,
                              self.player.spawns, self.player.kills,
                              self.player.deaths))
-        print("Current unit price: %s\n" % (self.player.unit_price,))
+        print("Current unit price: %s\tGold needed to spawn all: %s\n" %
+              (self.player.unit_price, self.player.unit_price * self.player.spawns))
 
     def print_short_help(self):
         print("s - show upgrades   e - end turn   i - enemy info   h - help   q - exit\n")
