@@ -16,6 +16,10 @@ HOME_PIC = "|^|"
 PLAYER_PIC = "%s>"
 ENEMY_PIC = "<%s"
 ARMY_PIC = {'player': PLAYER_PIC, 'computer': ENEMY_PIC}
+PLAYER_FIGHTING_PIC = "%sx"
+ENEMY_FIGHTING_PIC = "x%s"
+ARMY_FIGHTING_PIC = {'player': PLAYER_FIGHTING_PIC,
+                     'computer': ENEMY_FIGHTING_PIC}
 
 DISTANCE = 70
 INCOME_LINE = "." * DISTANCE
@@ -341,9 +345,13 @@ class Army(object):
             self.units = []
 
     def move(self):
+        """Move army by setting new position."""
         self.position += self.movement * self.speed
 
     def draw(self, player):
+        """Return image of army."""
+        if self.has_target():
+            return ARMY_FIGHTING_PIC[player] % len(self.units)
         return ARMY_PIC[player] % len(self.units)
 
     def is_enemy_castle_reachable(self):
