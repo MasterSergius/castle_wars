@@ -26,6 +26,7 @@ TIME_TICKS_PER_TURN = 15
 SPAWN_RATE = TIME_TICKS_PER_TURN * 3
 
 CASTLE_HP = 10000
+CASTLE_RECEIVE_DAMAGE = 0.1
 
 UNIT_HP = 5
 UNIT_DMG = 1
@@ -58,11 +59,13 @@ UNIT_UPGRADE_PRICES = {'hp': 100,
 
 CASTLE_UPGRADES = {'income': 10,
                    'dmg': 5,
-                   'regen': 10}
+                   'regen': 10,
+                   'hp': 1000}
 
 CASTLE_UPGRADE_PRICES = {'income': 100,
                          'dmg': 300,
-                         'regen': 200}
+                         'regen': 200,
+                         'hp': 500}
 
 PLAYER_POSITIONS = {'player': 0, 'computer': DISTANCE+1}
 PLAYER_MOVEMENTS = {'player': 1, 'computer': -1}
@@ -215,8 +218,11 @@ class Castle(GameObject):
                 self.target = None
 
     def get_damage(self, damage):
-        """ Castle receive only half of damage """
-        damage = damage // 2
+        """ Castle receive only small percentage of damage.
+
+        If incoming damage == 0, castle receive damage equals to 1.
+        """
+        damage = damage * CASTLE_RECEIVE_DAMAGE
         if damage == 0:
             damage = 1
         self.hp -= damage
@@ -248,10 +254,12 @@ class Player(object):
         self.unit_gold_reward = REWARD_FOR_KILLING
         self.castle_income = 0
         self.castle_dmg = 0
+        self.castle_hp = CASTLE_HP
         self.castle_regen = 0
         self.castle_income_lvl = 0
         self.castle_dmg_lvl = 0
         self.castle_regen_lvl = 0
+        self.castle_hp_lvl = 0
         self.spawn_rate = SPAWN_RATE
 
     def spawn_units(self):
@@ -471,6 +479,7 @@ class CastleWars(object):
         print("5 - upgrade castle income, cost: %s" % (CASTLE_UPGRADE_PRICES['income'],))
         print("6 - upgrade castle damage, cost: %s" % (CASTLE_UPGRADE_PRICES['dmg'],))
         print("7 - upgrade castle regen, cost: %s" % (CASTLE_UPGRADE_PRICES['regen'],))
+        print("8 - upgrade castle regen, hp: %s" % (CASTLE_UPGRADE_PRICES['hp'],))
         print("\n")
 
     def show_upgrades(self, player):
@@ -532,6 +541,8 @@ class CastleWars(object):
             self.upgrade_castle_attr('player', 'dmg', count=count)
         elif choice == '7':
             self.upgrade_castle_attr('player', 'regen', count=count)
+        elif choice == '8':
+            self.upgrade_castle_attr('player', 'hp', count=count)
 
     def not_enough_gold(self):
         print("Not enough gold!")
@@ -566,6 +577,8 @@ class CastleWars(object):
             self.castles[player].__dict__[attr] += CASTLE_UPGRADES[attr] * count
             if attr == 'income':
                 self.players[player].income += CASTLE_UPGRADES['income'] * count
+            if attr == 'hp':
+                self.castles[player].max_hp += CASTLE_UPGRADES['hp'] * count
         else:
             self.not_enough_gold()
 
