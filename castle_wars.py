@@ -456,8 +456,8 @@ class CastleWars(object):
     def draw_game_field(self):
         # create appropriate string to show castles' hp
         half = (DISTANCE + len(HOME_PIC) * 2) // 2
-        player_castle_hp = ("%" + str(-half) + "s") % self.player.castle.hp
-        computer_castle_hp = ("%" + str(half) + "s") % self.computer.castle.hp
+        player_castle_hp = ("%" + str(-half) + "s") % int(self.player.castle.hp)
+        computer_castle_hp = ("%" + str(half) + "s") % int(self.computer.castle.hp)
         # print string with castles' hp
         print(player_castle_hp + computer_castle_hp)
         # print castles, road and units
@@ -510,12 +510,23 @@ class CastleWars(object):
         input("\nPress Enter to continue")
 
     def prompt(self):
+        """Ask player to make his game choices.
+
+        Example:
+            b - build one spawn
+            b*2 - build two spawns
+            b** - build spawns for all available gold
+        """
         choice = input("Your choice > ")
         count = 1
-        if '*' in choice:
-            choice, count = choice.split('*')
-            choice = choice.strip()
+        if '**' in choice:
+            # all choices - should be one char length
+            choice = choice[0]
+            count = 'max'
+        elif '*' in choice:
             try:
+                choice, count = choice.split('*')
+                choice = choice.strip()
                 count = int(count)
             except:
                 print("Wrong input!\n")
@@ -557,38 +568,47 @@ class CastleWars(object):
         input("Press Enter to continue")
 
     def build_spawn(self, player, count=1):
-        if self.players[player].gold >= SPAWN_COST * count:
-            self.players[player].spawns += count
-            self.players[player].gold -= SPAWN_COST * count;
-        else:
+        if count == 'max':
+            count = self.players[player].gold // SPAWN_COST
+        elif self.players[player].gold < SPAWN_COST * count:
             self.not_enough_gold()
+            return
+
+        self.players[player].spawns += count
+        self.players[player].gold -= SPAWN_COST * count;
 
     def upgrade_units_attr(self, player, attr, count=1):
         """ Upgrades chosen unit's attribute.
             Unit becomes more expensive per each upgrade.
         """
-        if self.players[player].gold >= UNIT_UPGRADE_PRICES[attr] * count:
-            self.players[player].__dict__["unit_%s_lvl" % attr] += count
-            self.players[player].__dict__["unit_%s" % attr] += UNIT_UPGRADES[attr] * count
-            self.players[player].gold -= UNIT_UPGRADE_PRICES[attr] * count;
-            self.players[player].unit_price += count
-            self.players[player].unit_gold_reward += count
-        else:
+        if count == 'max':
+            count = self.players[player].gold // UNIT_UPGRADE_PRICES[attr]
+        elif self.players[player].gold < UNIT_UPGRADE_PRICES[attr] * count:
             self.not_enough_gold()
+            return
+
+        self.players[player].__dict__["unit_%s_lvl" % attr] += count
+        self.players[player].__dict__["unit_%s" % attr] += UNIT_UPGRADES[attr] * count
+        self.players[player].gold -= UNIT_UPGRADE_PRICES[attr] * count;
+        self.players[player].unit_price += count
+        self.players[player].unit_gold_reward += count
 
     def upgrade_castle_attr(self, player, attr, count=1):
         """ Upgrades chosen castle's attribute """
-        if self.players[player].gold >= CASTLE_UPGRADE_PRICES[attr] * count:
-            self.players[player].__dict__["castle_%s_lvl" % attr] += count
-            self.players[player].__dict__["castle_%s" % attr] += CASTLE_UPGRADES[attr] * count
-            self.players[player].gold -= CASTLE_UPGRADE_PRICES[attr] * count;
-            self.castles[player].__dict__[attr] += CASTLE_UPGRADES[attr] * count
-            if attr == 'income':
-                self.players[player].income += CASTLE_UPGRADES['income'] * count
-            if attr == 'hp':
-                self.castles[player].max_hp += CASTLE_UPGRADES['hp'] * count
-        else:
+        if count == 'max':
+            count = self.players[player].gold // CASTLE_UPGRADE_PRICES[attr]
+        elif self.players[player].gold < CASTLE_UPGRADE_PRICES[attr] * count:
             self.not_enough_gold()
+            return
+
+        self.players[player].__dict__["castle_%s_lvl" % attr] += count
+        self.players[player].__dict__["castle_%s" % attr] += CASTLE_UPGRADES[attr] * count
+        self.players[player].gold -= CASTLE_UPGRADE_PRICES[attr] * count;
+        self.castles[player].__dict__[attr] += CASTLE_UPGRADES[attr] * count
+        if attr == 'income':
+            self.players[player].income += CASTLE_UPGRADES['income'] * count
+        if attr == 'hp':
+            self.castles[player].max_hp += CASTLE_UPGRADES['hp'] * count
 
     def make_turn(self):
         while True:
