@@ -113,11 +113,11 @@ produce one unit, but you must have enough gold for it. Each upgrade give +1
 to unit price. Basic unit price - 5 gold.
 
 <= Income & Gold =>
-You get income - 2 gold for each piece of land you own. You own land from
-your castle to the furthest away your army. It shown as "+" on "income line".
-Enemy's land shown as "-". Another income doesn't depend on how much land you
-own and can be upgraded via castle upgrades. Also, you get gold for killing
-enemy units. Each upgrade give +1 to gold reward for killing.
+You get income - 2 gold for each piece of land you own. You own land from your
+castle to your army which is furthest. It is shown as "+" on "income line".
+Enemy's land shown as "-". Another type of income can be upgraded via castle
+upgrades. Also, you get gold for killing enemy units. Each upgrade give +1 to
+gold reward for killing.
 
 <= Upgrades =>
 All upgrades have no limits, i.e. you can upgrade any attribute infinitely.
@@ -129,10 +129,11 @@ regenerate it's HP once per turn.
 
 <= Time tick & Turn =>
 Each turn consists of 15 time ticks. Thus, basic units with no upgrades can
-attack 3 times and castle - 15 times.
+attack 3 times and castle can attack nearest units 15 times.
 
 <= Tips & Tricks =>
-You can type "b*3" to build 3 spawn at once. The same works for upgrades.
+You can type "b*3" to build 3 spawn at once or "b**" to build spawns for all
+available gold. The same works for upgrades.
 """
     return help_string
 
