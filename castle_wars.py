@@ -27,7 +27,8 @@ LAND = "_" * DISTANCE + '_' * len(HOME_PIC) * 2
 HEALTH_LINE = ' ' * len(LAND)
 
 TIME_TICKS_PER_TURN = 15
-SPAWN_RATE = TIME_TICKS_PER_TURN * 3
+SPAWN_RATE_IN_TURNS = 3
+SPAWN_RATE = TIME_TICKS_PER_TURN * SPAWN_RATE_IN_TURNS
 
 CASTLE_HP = 10000
 CASTLE_RECEIVE_DAMAGE = 0.1
@@ -42,6 +43,7 @@ GOLD = 1000
 
 UNIT_PRICE = 5
 REWARD_FOR_KILLING = 1
+UPGRADE_GOLD_REWARD = 1
 
 # Income per one piece of land owning
 LAND_INCOME = 5
@@ -105,18 +107,18 @@ Unit - the main object in game. Upgrading units doesn't affect spawned units,
 but new units which are about to spawn. Units move forward for one piece of
 land (cell) with each time tick or attack if it has enough attack rate.
 With each time tick attack rate increases by unit's attack speed value.
-Unit must have 5 attack rate to make damage.
+Unit must have %(attack_rate)s attack rate to make damage.
 
 <= Spawns =>
-Units spawn once per 3 turns and move towards enemy's castle. Each spawn can
-produce one unit, but you must have enough gold for it. Each upgrade give +1
-to unit price. Basic unit price - 5 gold.
+Units spawn once per %(spawn_rate)s turns and move towards enemy's castle. Each spawn can
+produce one unit, but you must have enough gold for it. Each upgrade give +%(upgrade_gold_reward)s
+to unit price. Basic unit price - %(unit_price)s gold.
 
 <= Income & Gold =>
-You get income - 2 gold for each piece of land you own. You own land from your
+You get income - %(land_income)s gold for each piece of land you own. You own land from your
 castle to your army which is furthest. It is shown as "+" on "income line".
 Enemy's land shown as "-". Another type of income can be upgraded via castle
-upgrades. Also, you get gold for killing enemy units. Each upgrade give +1 to
+upgrades. Also, you get gold for killing enemy units. Each upgrade give +%(upgrade_gold_reward)s to
 gold reward for killing.
 
 <= Upgrades =>
@@ -128,14 +130,19 @@ do damage to all units in army simultaneously with each time tick. Castle can
 regenerate it's HP once per turn.
 
 <= Time tick & Turn =>
-Each turn consists of 15 time ticks. Thus, basic units with no upgrades can
-attack 3 times and castle can attack nearest units 15 times.
+Each turn consists of %(time_ticks_per_turn)s time ticks. Thus, basic units with no upgrades can
+attack %(attacks_per_turn)s times and castle can attack nearest units %(time_ticks_per_turn)s times.
 
 <= Tips & Tricks =>
 You can type "b*3" to build 3 spawn at once or "b**" to build spawns for all
 available gold. The same works for upgrades.
 """
-    return help_string
+    substitute_params = {'unit_price': UNIT_PRICE, 'attack_rate': ATTACK_RATE,
+                         'upgrade_gold_reward': UPGRADE_GOLD_REWARD,
+                         'land_income': LAND_INCOME, 'spawn_rate': SPAWN_RATE_IN_TURNS,
+                         'time_ticks_per_turn': TIME_TICKS_PER_TURN,
+                         'attacks_per_turn': TIME_TICKS_PER_TURN // ATTACK_RATE}
+    return help_string % substitute_params
 
 def convert_percentage(percentage):
     """ Build correct dict for random choice from percentage """
@@ -601,8 +608,8 @@ class CastleWars(object):
         self.players[player].__dict__["unit_%s_lvl" % attr] += count
         self.players[player].__dict__["unit_%s" % attr] += UNIT_UPGRADES[attr] * count
         self.players[player].gold -= UNIT_UPGRADE_PRICES[attr] * count;
-        self.players[player].unit_price += count
-        self.players[player].unit_gold_reward += count
+        self.players[player].unit_price += count * UPGRADE_GOLD_REWARD
+        self.players[player].unit_gold_reward += count * UPGRADE_GOLD_REWARD
 
     def upgrade_castle_attr(self, player, attr, count=1):
         """ Upgrades chosen castle's attribute """
