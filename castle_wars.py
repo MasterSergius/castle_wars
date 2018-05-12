@@ -449,7 +449,8 @@ class CastleWars(object):
         self.castles = {'player': self.castle_player, 'computer': self.castle_computer}
         self.players = {'player': self.player, 'computer': self.computer}
         self.income_line = INCOME_LINE
-        self.health_line = HEALTH_LINE
+        self.player_health_line = HEALTH_LINE
+        self.computer_health_line = HEALTH_LINE
 
     def put_in_position(self, pic, position):
         self.warline = self.warline[:position] + pic + self.warline[position+len(pic):]
@@ -467,8 +468,9 @@ class CastleWars(object):
         for player_name, player in self.players.items():
             for army in player.armies:
                 self.put_in_position(army.draw(player_name), army.position)
-        print(self.warline, '\n')
-        print(self.health_line, '\n')
+        print(self.warline)
+        print(self.player_health_line)
+        print(self.computer_health_line, '\n')
 
     def print_status(self):
         status_line = "Gold: %s   Income: %s   Spawns: %s   Kills: %s   Deaths: %s\n"
@@ -695,7 +697,8 @@ class CastleWars(object):
 
         # move armies or fight
         for tick in range(TIME_TICKS_PER_TURN):
-            self.health_line = HEALTH_LINE
+            self.player_health_line = HEALTH_LINE
+            self.computer_health_line = HEALTH_LINE
             for player_name, player in self.players.items():
                 # spawn new units
                 units = player.spawn_units()
@@ -729,9 +732,14 @@ class CastleWars(object):
                         army.move()
                         army.refresh_attack_rate()
                         player.check_armies_collision(army)
-                    self.health_line = put_substr_in_position(str(army.hp),
-                                                              army.position,
-                                                              self.health_line)
+                    if player_name == 'player':
+                        self.player_health_line = put_substr_in_position(str(army.hp),
+                                                                         army.position,
+                                                                         self.player_health_line)
+                    else:
+                        self.computer_health_line = put_substr_in_position(str(army.hp),
+                                                                           army.position,
+                                                                           self.computer_health_line)
                 # check if castle can attack
                 if player.castle.has_target() or player.castle.get_target(enemy_armies):
                     player.castle.attack()
