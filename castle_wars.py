@@ -481,14 +481,22 @@ class CastleWars(object):
     def print_short_help(self):
         print("s - show upgrades   e - end turn   i - enemy info   h - help   q - exit\n")
         print("b - build spawn, cost: %s" % (SPAWN_COST,))
-        print("1 - upgrade units hp, cost: %s" % (UNIT_UPGRADE_PRICES['hp'],))
-        print("2 - upgrade units damage, cost: %s" % (UNIT_UPGRADE_PRICES['dmg'],))
-        print("3 - upgrade units attack speed, cost: %s" % (UNIT_UPGRADE_PRICES['attack_speed'],))
-        print("4 - upgrade units regen, cost: %s" % (UNIT_UPGRADE_PRICES['regen'],))
-        print("5 - upgrade castle income, cost: %s" % (CASTLE_UPGRADE_PRICES['income'],))
-        print("6 - upgrade castle damage, cost: %s" % (CASTLE_UPGRADE_PRICES['dmg'],))
-        print("7 - upgrade castle regen, cost: %s" % (CASTLE_UPGRADE_PRICES['regen'],))
-        print("8 - upgrade castle regen, hp: %s" % (CASTLE_UPGRADE_PRICES['hp'],))
+        print("1 - upgrade units hp +%s, cost: %s" % (UNIT_UPGRADES['hp'],
+                                                      UNIT_UPGRADE_PRICES['hp']))
+        print("2 - upgrade units damage +%s, cost: %s" % (UNIT_UPGRADES['dmg'],
+                                                      UNIT_UPGRADE_PRICES['dmg']))
+        print("3 - upgrade units attack speed +%s, cost: %s" % (UNIT_UPGRADES['attack_speed'],
+                                                                UNIT_UPGRADE_PRICES['attack_speed']))
+        print("4 - upgrade units regen +%s, cost: %s" % (UNIT_UPGRADES['regen'],
+                                                     UNIT_UPGRADE_PRICES['regen']))
+        print("5 - upgrade castle income +%s, cost: %s" % (CASTLE_UPGRADES['income'],
+                                                           CASTLE_UPGRADE_PRICES['income']))
+        print("6 - upgrade castle damage +%s, cost: %s" % (CASTLE_UPGRADES['dmg'],
+                                                           CASTLE_UPGRADE_PRICES['dmg']))
+        print("7 - upgrade castle regen +%s, cost: %s" % (CASTLE_UPGRADES['regen'],
+                                                          CASTLE_UPGRADE_PRICES['regen']))
+        print("8 - upgrade castle hp +%s, cost: %s" % (CASTLE_UPGRADES['hp'],
+                                                       CASTLE_UPGRADE_PRICES['hp']))
         print("\n")
 
     def show_upgrades(self, player):
@@ -653,7 +661,7 @@ class CastleWars(object):
                           'unit_regen':5, 'castle_dmg':25, 'castle_regen':25}
         strategy, max_rand = build_computer_strategy(percentage, self.computer.gold)
 
-        choice = self.computer_choice(random.randint(1,max_rand), strategy)
+        choice = self.computer_choice(random.randint(1, max_rand), strategy)
         if choice == 'spawn':
             self.build_spawn('computer')
         elif choice == 'unit_hp':
