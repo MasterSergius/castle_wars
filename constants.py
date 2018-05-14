@@ -122,3 +122,5 @@ substitute_params = {'unit_price': UNIT_PRICE, 'attack_rate': ATTACK_RATE,
                      'attacks_per_turn': TIME_TICKS_PER_TURN // ATTACK_RATE}
 
 HELP_STRING = help_string % substitute_params
+
+HELP_ROWS_PER_PAGE = 30

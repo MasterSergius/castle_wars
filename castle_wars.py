@@ -4,6 +4,7 @@
 #
 # Author: Master Sergius <master.sergius@gmail.com>
 
+import math
 import os
 import random
 import sys
@@ -21,8 +22,24 @@ def log(string):
         f.write(string)
 
 def help():
-    """ Returns all necessary information to play this game """
-    return HELP_STRING
+    """ Show all necessary information to play this game.
+
+    Show help with pagination to fit small screen
+    """
+    start_row, end_row = 0, HELP_ROWS_PER_PAGE
+    help_rows = HELP_STRING.split('\n')
+    page = 1
+    pages = math.ceil(len(help_rows) // HELP_ROWS_PER_PAGE + 1)
+    while start_row < len(help_rows):
+        print('\n'.join(help_rows[start_row:end_row]))
+        print('\nHelp page %s/%s' % (page, pages))
+        help_choice = input("Press Enter to continue or type 'q' to quit help: ")
+        os.system('clear')
+        if help_choice == 'q':
+            break
+        start_row += HELP_ROWS_PER_PAGE
+        end_row += HELP_ROWS_PER_PAGE
+        page += 1
 
 def convert_percentage(percentage):
     """ Build correct dict for random choice from percentage """
@@ -436,8 +453,7 @@ class CastleWars(object):
             return "end_turn"
         elif choice == 'h':
             os.system("clear")
-            print(help()+"\n")
-            input("Press Enter to continue")
+            help()
         elif choice == 's':
             self.show_upgrades('player')
         elif choice == 'i':
