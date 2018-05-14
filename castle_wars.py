@@ -143,6 +143,7 @@ class Player(object):
     def __init__(self, castle=Castle(), player_name='player'):
         self.name = player_name
         self.gold = GOLD
+        self.gold_earned = GOLD
         self.income = 0
         self.spawns = 0
         self.kills = 0
@@ -209,6 +210,7 @@ class Player(object):
 
     def add_gold(self, gold):
         self.gold += gold
+        self.gold_earned += gold
 
 
 class Unit(GameObject):
@@ -596,7 +598,7 @@ class CastleWars(object):
         enemy_armies = []
         for player_name, player in self.players.items():
             # get income
-            player.gold += player.income
+            player.add_gold(player.income)
 
         # move armies or fight
         for tick in range(TIME_TICKS_PER_TURN):
@@ -695,20 +697,31 @@ class CastleWars(object):
             unit.attack()
         army.refresh_units_target()
 
+    def show_game_stats(self):
+        print('Game statistics\n')
+        print('-= Player =-\n')
+        print('Gold earned: %s\n' % (self.player.gold_earned,))
+        print('Kills: %10s   Deaths: %10s\n' % (self.player.kills, self.player.deaths))
+        print('-= Computer =-\n')
+        print('Gold earned: %s\n' % (self.computer.gold_earned,))
+        print('Kills: %10s   Deaths: %10s\n' % (self.computer.kills, self.computer.deaths))
+
+    def game_over(self, message):
+        os.system('clear')
+        print(message)
+        self.show_game_stats()
+        input("Press Enter to exit")
+        self.exit()
+
     def check_game_over(self):
         """ Check if any castle has hp equals 0.
         If yes, game must be ended
         """
         if self.castles['player'].hp == 0:
-            os.system('clear')
-            print("You loose!\n")
-            input("Press Enter to exit")
-            self.exit()
+            self.game_over('You loose!\n')
+
         if self.castles['computer'].hp == 0:
-            os.system('clear')
-            print("You win!\n")
-            input("Press Enter to exit")
-            self.exit()
+            self.game_over('You win!\n')
 
     def exit(self):
         sys.exit(0)
