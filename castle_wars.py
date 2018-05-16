@@ -19,7 +19,7 @@ from constants import *
 def log(string):
     """ Temporary logging for dev/debug purposes """
     with open('/tmp/castle_wars.log', 'a') as f:
-        f.write(string)
+        f.write('%s\n' % (string,))
 
 def help():
     """ Show all necessary information to play this game.
@@ -66,6 +66,9 @@ def build_computer_strategy(percentage, gold):
     return (convert_percentage(filtered_percentage), total_percentage)
 
 def put_substr_in_position(substr, pos, string):
+    """Puts substr inside string instead of symbols in defined positions."""
+    pos = max(pos, 0)
+    pos = min(pos, len(string) - 1)
     return string[:pos] + substr + string[pos+len(substr):]
 
 def get_enemy_army_in_position(position, enemy_armies):
@@ -358,8 +361,11 @@ class CastleWars(object):
         self.player_health_line = HEALTH_LINE
         self.computer_health_line = HEALTH_LINE
 
-    def put_in_position(self, pic, position):
-        self.warline = self.warline[:position] + pic + self.warline[position+len(pic):]
+    def put_in_position(self, pic, position, player_name):
+        if player_name == 'player':
+            # number and > or x = 2 symbols
+            position = position - len(pic) + 2
+        self.warline = put_substr_in_position(pic, position, self.warline)
 
     def draw_game_field(self):
         # create appropriate string to show castles' hp
@@ -373,7 +379,7 @@ class CastleWars(object):
         self.warline = LAND
         for player_name, player in self.players.items():
             for army in player.armies:
-                self.put_in_position(army.draw(player_name), army.position)
+                self.put_in_position(army.draw(player_name), army.position, player_name)
         print(self.warline)
         print(self.player_health_line)
         print(self.computer_health_line, '\n')
