@@ -32,7 +32,7 @@ REWARD_FOR_KILLING = 1
 UPGRADE_GOLD_REWARD = 1
 
 # Income per one piece of land owning
-LAND_INCOME = 5
+LAND_INCOME = 10
 
 SPAWN_COST = 200
 
@@ -87,16 +87,17 @@ With each time tick attack rate increases by unit's attack speed value.
 Unit must have %(attack_rate)s attack rate to make damage.
 
 <= Spawns =>
-Units spawn once per %(spawn_rate)s turns and move towards enemy's castle. Each spawn can
-produce one unit, but you must have enough gold for it. Each upgrade give +%(upgrade_gold_reward)s
-to unit price. Basic unit price - %(unit_price)s gold.
+Units spawn once per %(spawn_rate)s turns and move towards enemy's castle. Each
+spawn can produce one unit, but you must have enough gold for it. Each upgrade
+give +%(upgrade_gold_reward)s to unit price.
+Basic unit price - %(unit_price)s gold.
 
 <= Income & Gold =>
-You get income - %(land_income)s gold for each piece of land you own. You own land from your
-castle to your army which is furthest. It is shown as "+" on "income line".
-Enemy's land shown as "-". Another type of income can be upgraded via castle
-upgrades. Also, you get gold for killing enemy units. Each upgrade give +%(upgrade_gold_reward)s to
-gold reward for killing.
+You get income - %(land_income)s gold for each piece of land you own. You own
+land from your castle to your army which is furthest. It is shown as "+" on
+"income line". Enemy's land shown as "-". Another type of income can be
+upgraded via castle upgrades. Also, you get gold for killing enemy units. Each
+upgrade give +%(upgrade_gold_reward)s to gold reward for killing.
 
 <= Upgrades =>
 All upgrades have no limits, i.e. you can upgrade any attribute infinitely.
@@ -107,12 +108,18 @@ do damage to all units in army simultaneously with each time tick. Castle can
 regenerate it's HP once per turn.
 
 <= Time tick & Turn =>
-Each turn consists of %(time_ticks_per_turn)s time ticks. Thus, basic units with no upgrades can
-attack %(attacks_per_turn)s times and castle can attack nearest units %(time_ticks_per_turn)s times.
+Each turn consists of %(time_ticks_per_turn)s time ticks. Thus, basic units
+with no upgrades can attack %(attacks_per_turn)s times and castle can attack
+nearest units %(time_ticks_per_turn)s times.
 
 <= Tips & Tricks =>
 You can type "b*3" to build 3 spawn at once or "b**" to build spawns for all
 available gold. The same works for upgrades.
+
+<= Contacts =>
+In case of any bugs or suggestions send an email to master.sergius@gmail.com
+
+Thank you for playing this game! First playable version released in 2017
 """
 
 substitute_params = {'unit_price': UNIT_PRICE, 'attack_rate': ATTACK_RATE,
