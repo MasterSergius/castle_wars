@@ -616,6 +616,8 @@ class CastleWars(object):
                                       self.players[player].castle_dmg_lvl))
         print("regen: %s (%s level)" % (self.players[player].castle_regen,
                                         self.players[player].castle_regen_lvl))
+        print("hp: %s (%s level)" % (self.castles[player].max_hp,
+                                        self.players[player].castle_hp_lvl))
         input("\nPress Enter to continue")
 
     def player_action(self, choice, count):
@@ -1001,7 +1003,9 @@ class CastleWars(object):
 
     def exit(self):
         """ Actions to perform on exit. """
-        sys.exit(0)
+        confirm = input('Are you sure you want to exit? (y/n): ')
+        if confirm.lower() == 'y':
+            sys.exit(0)
 
     def draw_scene(self):
         """ Draw scene on each time tick. """
