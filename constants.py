@@ -74,7 +74,8 @@ COSTS = {'spawn': SPAWN_COST, 'unit_hp': UNIT_UPGRADE_PRICES['hp'],
          'unit_regen': UNIT_UPGRADE_PRICES['regen'],
          'income': CASTLE_UPGRADE_PRICES['income'],
          'castle_dmg': CASTLE_UPGRADE_PRICES['dmg'],
-         'castle_regen': CASTLE_UPGRADE_PRICES['regen']}
+         'castle_regen': CASTLE_UPGRADE_PRICES['regen'],
+         'castle_hp': CASTLE_UPGRADE_PRICES['hp']}
 
 help_string = """<= Goal =>
 Destroy enemy's Castle.
@@ -131,3 +132,37 @@ substitute_params = {'unit_price': UNIT_PRICE, 'attack_rate': ATTACK_RATE,
 HELP_STRING = help_string % substitute_params
 
 HELP_ROWS_PER_PAGE = 30
+
+def short_help_string():
+    """ Build short help string using defined constants """
+    unit_attrs = ('hp', 'dmg', 'attack_speed', 'regen')
+    castle_attrs = ('income', 'dmg', 'regen', 'hp')
+
+    attr_name_map = {'dmg': 'damage', 'attack_speed': 'attack_speed'}
+
+    def map_name(attr):
+        return attr_name_map[attr] if attr in attr_name_map else attr
+
+    short_help = 's - show upgrades   e - end turn   i - enemy info   ' \
+                 'h - help   q - exit\n\n' \
+                 'b - build spawn, cost: %s\n' % (SPAWN_COST,)
+    number = 1
+    for attribute in unit_attrs:
+        short_help += '%s - upgrade units %s +%s, cost %s\n' \
+                       % (number,
+                       map_name(attribute),
+                       UNIT_UPGRADES[attribute],
+                       UNIT_UPGRADE_PRICES[attribute])
+        number += 1
+
+    for attribute in castle_attrs:
+        short_help += '%s - upgrade castle %s +%s, cost %s\n' \
+                       % (number,
+                       map_name(attribute),
+                       CASTLE_UPGRADES[attribute],
+                       CASTLE_UPGRADE_PRICES[attribute])
+        number += 1
+
+    return short_help
+
+SHORT_HELP_STRING = short_help_string()

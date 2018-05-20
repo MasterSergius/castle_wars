@@ -21,6 +21,7 @@ def log(string):
     with open('/tmp/castle_wars.log', 'a') as f:
         f.write('%s\n' % (string,))
 
+
 def help():
     """ Show all necessary information to play this game.
 
@@ -41,8 +42,33 @@ def help():
         end_row += HELP_ROWS_PER_PAGE
         page += 1
 
+
 def convert_percentage(percentage):
-    """ Build correct dict for random choice from percentage """
+    """ Build correct dict for random choice from percentage.
+
+    For example, there are three actions, first action must be performed
+    in 20% of all occurance, second in 50% and third in 30%. So, random from
+    1 to 100 should point to correct action. All random numbers 1-20 should
+    point to 1st action (20%), next 50 numbers 21-70 (50%) should point to
+    2nd action and rest 30 numbers 71-100 - 3rd action.
+    Thus, we can build dict with numbers 20, 70, 100 as keys and actions as
+    values and compare random number with keys.
+
+    Args:
+        - `percentage`: dict, represents computer strategy in percentage
+
+    Return:
+        - `dict`, converted percentage to deal with random
+
+    Example:
+        percentage = {'spawn':35, 'income':30,
+                      'unit_hp':10, 'unit_dmg':10,
+                      'unit_attack_speed':10, 'unit_regen':5}
+
+        converted_percentage = {5:'unit_regen', 15:'unit_attack_speed',
+                                25:'unit_dmg', 35: 'unit_hp', 65: 'income',
+                                100: 'spawn'}
+    """
     strategy = {}
     number = 0
     for action in sorted(percentage, key=percentage.get):
@@ -55,8 +81,21 @@ def convert_percentage(percentage):
             sys.exit(0)
     return strategy
 
+
 def build_computer_strategy(percentage, gold):
-    """Filters possible actions. Leave only those which are affordable."""
+    """Filters possible actions. Leave only those which are affordable.
+
+    After each action computer must rebuild strategy according to gold amount.
+    If some action can't be performed because of lack of gold, it will be
+    dropped and total amount of percentage will decrease by its percentage.
+
+    Args:
+        - `percentage`: dict, represents computer strategy in percentage
+        - `gold`: int, amount of computer player's gold
+
+    Return:
+        tuple (dict, int) - (converted percentage, total percentage (<=100))
+    """
     total_percentage = 0
     filtered_percentage = {}
     for action, percent in percentage.items():
@@ -65,13 +104,33 @@ def build_computer_strategy(percentage, gold):
             total_percentage += percent
     return (convert_percentage(filtered_percentage), total_percentage)
 
+
 def put_substr_in_position(substr, pos, string):
-    """Puts substr inside string instead of symbols in defined positions."""
+    """Puts substr inside string instead of symbols in defined positions.
+
+    Args:
+        - `substr`: str, represents string which must be inserted
+        - `pos`: int, position to insert string
+        - `string`: str, string which substr must be inserted to
+
+    Return:
+        str, new string with replaces symbols with substr
+    """
     pos = max(pos, 0)
     pos = min(pos, len(string) - 1)
     return string[:pos] + substr + string[pos+len(substr):]
 
+
 def get_enemy_army_in_position(position, enemy_armies):
+    """Find enemy army in given position.
+
+    Args:
+        - `position`: int, LAND position (from 1 to length of LAND)
+        - `enemy_armies`: list, list of all spawned enemy armies
+
+    Return:
+        instance of Army if it is placed in given position, None otherwise
+    """
     for army in enemy_armies:
         if position == army.position:
             return army
@@ -79,16 +138,28 @@ def get_enemy_army_in_position(position, enemy_armies):
 
 
 class GameObject(metaclass=ABCMeta):
+
+    """Abstract class which is base class for all game objects."""
+
     @abstractmethod
     def __init__(self):
+        """Method must be overriden in child class."""
         pass
 
     def get_damage(self, damage):
+        """Recieve damage from enemy unit or castle.
+
+        Subtract damage amount from health points.
+
+        Args:
+            - `damage`: int, incoming damage
+        """
         self.hp -= damage
         if self.hp < 0:
             self.hp = 0
 
     def regenerate(self):
+        """Add unit's regen value to health points."""
         if self.hp < self.max_hp:
             self.hp += self.regen
             if self.hp > self.max_hp:
@@ -96,6 +167,9 @@ class GameObject(metaclass=ABCMeta):
 
 
 class Castle(GameObject):
+
+    """Class represents player's castle."""
+
     def __init__(self, hp=CASTLE_HP, dmg=0, regen=0, position=0, direction=0):
         self.hp = hp
         self.max_hp = hp
@@ -107,11 +181,23 @@ class Castle(GameObject):
         self.target = None
 
     def has_target(self):
+        """Check if castle has target to attack.
+
+        Return:
+            - instance of Army if it has target, None otherwise
+        """
         return self.target
 
     def get_target(self, enemy_armies):
-        """ Find target for army to fight with.
-            Preferable target - enemy's army.
+        """ Find target to attack.
+
+        Set self.target to enemy_army if it can be attacked.
+
+        Args:
+            - `enemy_armies`: list of all enemy armies
+
+        Return:
+            - True if target successfully set, False otherwise
         """
         self.target = get_enemy_army_in_position(self.position, enemy_armies)
         if not self.target:
@@ -137,12 +223,13 @@ class Castle(GameObject):
         damage = damage * CASTLE_RECEIVE_DAMAGE
         if damage == 0:
             damage = 1
-        self.hp -= damage
-        if self.hp < 0:
-            self.hp = 0
+        super().get_damage(damage)
 
 
 class Player(object):
+
+    """ Class designed to store player related data and organise methods """
+
     def __init__(self, castle=Castle(), player_name='player'):
         self.name = player_name
         self.gold = GOLD
@@ -176,7 +263,11 @@ class Player(object):
         self.spawn_rate = SPAWN_RATE
 
     def spawn_units(self):
-        """ Spawn unit from each player spawn with current upgrades """
+        """ Spawn unit from each player spawn with current upgrades.
+
+        Return:
+            list, spawned units if it is time, None otherwise
+        """
         units = []
         if self.spawn_rate == SPAWN_RATE:
             parameters = {'hp': self.unit_hp, 'dmg': self.unit_dmg,
@@ -196,27 +287,47 @@ class Player(object):
         return units
 
     def union_armies(self, army1, army2):
+        """ Union two armies in one if they are in one position.
+
+        Args:
+            - army1: instance of Army
+            - army2: instance of Army
+        """
         army1.copy_target(army2.target)
         for unit in army1.units:
             army2.units.append(unit)
         self.armies.remove(army1)
 
     def check_armies_collision(self, army):
+        """ Check if given army come to position with other army.
+
+        Args:
+            - army: instance or Army
+        """
         for other_army in self.armies:
             if not army is other_army and army.position == other_army.position:
                 self.union_armies(army, other_army)
                 break
 
     def remove_dead_armies(self):
+        """ Remove armies from player if all units are dead. """
         alive = [army for army in self.armies if army.units]
         self.armies = alive[:]
 
     def add_gold(self, gold):
+        """ Add given gold amount to player's total gold.
+
+        Args:
+            - `gold`: int, gold to be added
+        """
         self.gold += gold
         self.gold_earned += gold
 
 
 class Unit(GameObject):
+
+    """ Class designed to store unit related data and organise methods """
+
     def __init__(self, hp=UNIT_HP, dmg=UNIT_DMG, speed=UNIT_SPD,
                  attack_speed=UNIT_ATSPD, regen=UNIT_REGEN,
                  gold_reward=REWARD_FOR_KILLING):
@@ -230,10 +341,31 @@ class Unit(GameObject):
         self.target = None
         self.gold_reward = gold_reward
 
+
+    def has_target(self):
+        """ Check if unit has alive target.
+
+        Return:
+            True if unit has target and target's hp > 0, False otherwise
+        """
+        return self.target is not None and self.target.hp
+
     def set_target(self, target):
+        """ Set target to attack.
+
+        Args:
+            - `target`: instance of Unit or Castle
+        """
         self.target = target
 
     def attack(self):
+        """ Hit target with unit's damage value.
+
+        Unit can attack if its attack rate higher or equal ATTACK_RATE.
+        After hit, its attack rate decreased by ATTACK_RATE.
+        Unit will hit target until its attack rate become lower than
+        ATTACK_RATE.
+        """
         while self.attack_rate >= ATTACK_RATE:
             self.target.get_damage(self.dmg)
             self.attack_rate -= ATTACK_RATE
@@ -241,10 +373,17 @@ class Unit(GameObject):
             self.attack_rate += self.attack_speed
 
     def refresh_attack_rate(self):
-        self.attack_rate = ATTACK_RATE if ATTACK_RATE > self.attack_speed else self.attack_speed
+        """ Refresh unit's attack rate.
+
+        This is usually done when battle with enemy army is over.
+        """
+        self.attack_rate = max(ATTACK_RATE, self.attack_speed)
 
 
 class Army(object):
+
+    """ Class designed to store army related data and organise methods """
+
     def __init__(self, position=0, movement=0, units=None,
                  enemy_castle=None, enemy=None):
         self.position = position
@@ -266,16 +405,33 @@ class Army(object):
         """Move army by setting new position."""
         self.position += self.movement * self.speed
 
-    def draw(self, player):
-        """Return image of army."""
+    def draw(self, player_name):
+        """Return image of army.
+
+        Args:
+            - `player_name`: name of army owner
+
+        Return:
+            str, string represents image of army
+        """
         if self.has_target():
-            return ARMY_FIGHTING_PIC[player] % len(self.units)
-        return ARMY_PIC[player] % len(self.units)
+            return ARMY_FIGHTING_PIC[player_name] % len(self.units)
+        return ARMY_PIC[player_name] % len(self.units)
 
     def is_enemy_castle_reachable(self):
+        """ Check if army can attack enemy's castle.
+
+        Return:
+            True if castle is in neigbour cell, False otherwise
+        """
         return abs(self.position-self.enemy_castle.position) <= 1
 
     def has_target(self):
+        """Check if army has target to attack.
+
+        Return:
+            instance of Army or Castle if it has target, None otherwise
+        """
         if self.target and self.target.hp == 0:
             self.target = None
         return self.target
@@ -283,6 +439,12 @@ class Army(object):
     def get_target(self, enemy_armies):
         """ Find target for army to fight with.
             Preferable target - enemy's army.
+
+        Args:
+            - `enemy_armies`: list of all enemy armies
+
+        Return:
+            True if Army or Castle can be attacked, False otherwise
         """
         self.target = get_enemy_army_in_position(self.position, enemy_armies)
         if not self.target:
@@ -295,11 +457,17 @@ class Army(object):
             for unit in self.units:
                 unit.set_target(self.target)
         if not self.target:
-            self.target = None
             return False
         return True
 
     def copy_target(self, other_army_target):
+        """ Copy other friendly army's target.
+
+        This method used when two armies union in one army.
+
+        Args:
+            - `other_army_target`: instance of Army or Castle, or None
+        """
         if isinstance(other_army_target, Army):
             for unit in self.units:
                 unit.set_target(random.choice(other_army_target.units))
@@ -313,14 +481,19 @@ class Army(object):
         """
         if self.target:
             for unit in self.units:
-                if unit.target and unit.target.hp == 0 and not isinstance(unit.target, Castle):
+                if not unit.has_target() and not isinstance(unit.target, Castle):
                     unit.set_target(random.choice(self.target.units))
 
     def refresh_attack_rate(self):
+        """ Refresh units' attack rate when battle is over. """
         for unit in self.units:
             unit.refresh_attack_rate()
 
     def remove_dead_units(self):
+        """ Remove dead units from army.
+
+        Additionally, calculate deads for game statistics.
+        """
         alive = []
         dead = 0
         for unit in self.units:
@@ -334,14 +507,25 @@ class Army(object):
         return dead
 
     def give_gold_reward(self, gold):
+        """ Give gold reward to enemy for dead unit.
+
+        Args:
+            - `gold`: int, amount of gold reward for dead unit
+        """
         self.enemy.add_gold(gold)
 
     def regen_units(self):
+        """ Regenerate health of all units in army. """
         for unit in self.units:
             unit.regenerate()
 
     @property
     def hp(self):
+        """ Calculate overall units' health points in army.
+
+        Return:
+            int - total units' hp
+        """
         units_health = 0
         for unit in self.units:
             units_health += unit.hp
@@ -349,6 +533,8 @@ class Army(object):
 
 
 class CastleWars(object):
+
+    """ Class designed to control game flow. """
 
     def __init__(self):
         self.castle_player = Castle(position=0, direction=1)
@@ -362,12 +548,20 @@ class CastleWars(object):
         self.computer_health_line = HEALTH_LINE
 
     def put_in_position(self, pic, position, player_name):
+        """ Put image of army, health, etc. in apropriate position on screen.
+
+        Args:
+            - `pic`: str, picture (image) to put in given position
+            - `position`: int, number of cell of land or health line
+            - `player_name`: str, player or computer
+        """
         if player_name == 'player':
             # number and > or x = 2 symbols
             position = position - len(pic) + 2
         self.warline = put_substr_in_position(pic, position, self.warline)
 
     def draw_game_field(self):
+        """ Draw game field by printing characters on screen. """
         # create appropriate string to show castles' hp
         half = (DISTANCE + len(HOME_PIC) * 2) // 2
         player_castle_hp = ("%" + str(-half) + "s") % int(self.player.castle.hp)
@@ -385,6 +579,7 @@ class CastleWars(object):
         print(self.computer_health_line, '\n')
 
     def print_status(self):
+        """ Print status line with players stats. """
         status_line = "Gold: %s   Income: %s   Spawns: %s   Kills: %s   Deaths: %s\n"
         print(status_line % (self.player.gold, self.player.income,
                              self.player.spawns, self.player.kills,
@@ -393,27 +588,18 @@ class CastleWars(object):
               (self.player.unit_price, self.player.unit_price * self.player.spawns))
 
     def print_short_help(self):
-        print("s - show upgrades   e - end turn   i - enemy info   h - help   q - exit\n")
-        print("b - build spawn, cost: %s" % (SPAWN_COST,))
-        print("1 - upgrade units hp +%s, cost: %s" % (UNIT_UPGRADES['hp'],
-                                                      UNIT_UPGRADE_PRICES['hp']))
-        print("2 - upgrade units damage +%s, cost: %s" % (UNIT_UPGRADES['dmg'],
-                                                      UNIT_UPGRADE_PRICES['dmg']))
-        print("3 - upgrade units attack speed +%s, cost: %s" % (UNIT_UPGRADES['attack_speed'],
-                                                                UNIT_UPGRADE_PRICES['attack_speed']))
-        print("4 - upgrade units regen +%s, cost: %s" % (UNIT_UPGRADES['regen'],
-                                                     UNIT_UPGRADE_PRICES['regen']))
-        print("5 - upgrade castle income +%s, cost: %s" % (CASTLE_UPGRADES['income'],
-                                                           CASTLE_UPGRADE_PRICES['income']))
-        print("6 - upgrade castle damage +%s, cost: %s" % (CASTLE_UPGRADES['dmg'],
-                                                           CASTLE_UPGRADE_PRICES['dmg']))
-        print("7 - upgrade castle regen +%s, cost: %s" % (CASTLE_UPGRADES['regen'],
-                                                          CASTLE_UPGRADE_PRICES['regen']))
-        print("8 - upgrade castle hp +%s, cost: %s" % (CASTLE_UPGRADES['hp'],
-                                                       CASTLE_UPGRADE_PRICES['hp']))
-        print("\n")
+        """ Print short help with list of possible actions.
+
+        This short help is always visible below game stats.
+        """
+        print(SHORT_HELP_STRING)
 
     def show_upgrades(self, player):
+        """ Print current player's upgrades.
+
+        Args:
+            - `player`: str, player or computer
+        """
         print("\nUnit upgrades: ")
         print("hp: %s (%s level)" % (self.players[player].unit_hp,
                                      self.players[player].unit_hp_lvl))
@@ -432,29 +618,13 @@ class CastleWars(object):
                                         self.players[player].castle_regen_lvl))
         input("\nPress Enter to continue")
 
-    def prompt(self):
-        """Ask player to make his game choices.
+    def player_action(self, choice, count):
+        """ Perform player's action according to his choice.
 
-        Example:
-            b - build one spawn
-            b*2 - build two spawns
-            b** - build spawns for all available gold
+        Args:
+            - `choice`: str, one character related to menu item
+            - `count`: amount of same actions must be performed
         """
-        choice = input("Your choice > ")
-        count = 1
-        if '**' in choice:
-            # all choices - should be one char length
-            choice = choice[0]
-            count = 'max'
-        elif '*' in choice:
-            try:
-                choice, count = choice.split('*')
-                choice = choice.strip()
-                count = int(count)
-            except:
-                print("Wrong input!\n")
-                print("Press Enter to Continue")
-                return None
         if choice == 'q':
             self.exit()
         elif choice == 'e':
@@ -485,11 +655,49 @@ class CastleWars(object):
         elif choice == '8':
             self.upgrade_castle_attr('player', 'hp', count=count)
 
+    def prompt(self):
+        """Ask player to make his game choices.
+
+        Return:
+            tuple (choice, count) - parsed user input
+
+        Example:
+            b - build one spawn
+            b*2 - build two spawns
+            b** - build spawns for all available gold
+        """
+        choice = input("Your choice > ")
+        count = 1
+        if '**' in choice:
+            # all choices - should be one char length
+            choice = choice[0]
+            count = 'max'
+        elif '*' in choice:
+            try:
+                choice, count = choice.split('*')
+                choice = choice.strip()
+                count = int(count)
+            except:
+                print("Wrong input!\n")
+                print("Press Enter to Continue")
+                return None
+        return self.player_action(choice, count)
+
     def not_enough_gold(self):
+        """ Print message which inform about lack of gold.
+
+        Wait till player press Enter.
+        """
         print("Not enough gold!")
         input("Press Enter to continue")
 
     def build_spawn(self, player, count=1):
+        """ Build unit spawn.
+
+        Args:
+            - `player`: str, player or computer
+            - `count`: int, amount of spawns to build
+        """
         if count == 'max':
             count = self.players[player].gold // SPAWN_COST
         elif self.players[player].gold < SPAWN_COST * count:
@@ -501,7 +709,12 @@ class CastleWars(object):
 
     def upgrade_units_attr(self, player, attr, count=1):
         """ Upgrades chosen unit's attribute.
-            Unit becomes more expensive per each upgrade.
+            Unit becomes more expensive with each upgrade.
+
+        Args:
+            - `player`: str, player or computer
+            - `attr`: str, unit's attribute to upgrade
+            - `count`: int, amount of upgrades of selected attribute
         """
         if count == 'max':
             count = self.players[player].gold // UNIT_UPGRADE_PRICES[attr]
@@ -516,7 +729,13 @@ class CastleWars(object):
         self.players[player].unit_gold_reward += count * UPGRADE_GOLD_REWARD
 
     def upgrade_castle_attr(self, player, attr, count=1):
-        """ Upgrades chosen castle's attribute """
+        """ Upgrades chosen castle's attribute.
+
+        Args:
+            - `player`: str, player or computer
+            - `attr`: str, castle's attribute to upgrade
+            - `count`: int, amount of upgrades of selected attribute
+        """
         if count == 'max':
             count = self.players[player].gold // CASTLE_UPGRADE_PRICES[attr]
         elif self.players[player].gold < CASTLE_UPGRADE_PRICES[attr] * count:
@@ -533,23 +752,44 @@ class CastleWars(object):
             self.castles[player].max_hp += CASTLE_UPGRADES['hp'] * count
 
     def make_turn(self):
+        """ Make player's turn.
+
+        Player will be asked to make choice till player choose 'end turn'.
+        After this computer will make its turn.
+        """
         while True:
             value = self.prompt()
             self.draw_scene()
             if value == 'end_turn':
                 break
 
-    def computer_choice(self, random_number, strategy):
+    def computer_choice(self, max_rand, strategy):
+        """ Simulate computer choice.
+
+        Args:
+            - `max_rand`: int, max random integer for current strategy
+            - `strategy`: dict, represents possible computer actions
+
+        Return:
+            str, randomly selected computer action
+        """
+        random_number = random.randint(1, max_rand)
         for key in sorted(strategy.keys()):
             if random_number <= key:
                 return strategy[key]
 
-    def computer_action(self):
-        if self.computer.gold < 100:
-            return False
-        # setup strategy
+    def choose_computer_strategy(self):
+        """ Choose computer strategy in percentage.
+
+        Build different strategies in dependency on situation.
+
+        Return:
+            dict, represents computer strategy in percentage
+        """
+        # setup basic strategy
         percentage = {'spawn':35, 'income':30, 'unit_hp':10, 'unit_dmg':10,
                       'unit_attack_speed':10, 'unit_regen':5}
+
         if self.computer.spawns == 0:
             percentage = {'spawn':100}
         elif self.computer.income < 5000:
@@ -567,14 +807,25 @@ class CastleWars(object):
         if self.computer.castle.hp < CASTLE_HP * 0.9:
             percentage = {'spawn':1, 'income':1, 'unit_hp':1,
                           'unit_dmg':1, 'unit_attack_speed':1,
-                          'unit_regen':1, 'castle_dmg':70, 'castle_regen':24}
+                          'unit_regen':1, 'castle_dmg':70, 'castle_regen':19,
+                          'castle_hp': 5}
         if self.computer.castle.hp < CASTLE_HP * 0.4:
-            percentage = {'spawn':10, 'income':20, 'unit_hp':5,
+            percentage = {'spawn':10, 'income':5, 'unit_hp':5,
                           'unit_dmg':5, 'unit_attack_speed':5,
-                          'unit_regen':5, 'castle_dmg':25, 'castle_regen':25}
-        strategy, max_rand = build_computer_strategy(percentage, self.computer.gold)
+                          'unit_regen':5, 'castle_dmg':25, 'castle_regen':25,
+                          'castle_hp':15}
+        return percentage
 
-        choice = self.computer_choice(random.randint(1, max_rand), strategy)
+    def computer_action(self):
+        """ Perform computer action. """
+        if self.computer.gold < 100:
+            return False
+
+        percentage = self.choose_computer_strategy()
+        strategy, max_rand = build_computer_strategy(percentage,
+                                                     self.computer.gold)
+
+        choice = self.computer_choice(max_rand, strategy)
         if choice == 'spawn':
             self.build_spawn('computer')
         elif choice == 'unit_hp':
@@ -591,9 +842,12 @@ class CastleWars(object):
             self.upgrade_castle_attr('computer', 'dmg')
         elif choice == 'castle_regen':
             self.upgrade_castle_attr('computer', 'regen')
+        elif choice == 'castle_hp':
+            self.upgrade_castle_attr('computer', 'hp')
         return True
 
     def computer_turn(self):
+        """ Simulate computer turn. """
         costs = self.computer.spawns * self.computer.unit_price
         while self.computer.gold + self.computer.income > costs:
             success = self.computer_action()
@@ -601,6 +855,10 @@ class CastleWars(object):
                 break
 
     def finish_turn(self):
+        """ Finish turn for player and computer.
+
+        Spawn units, move armies, get income, etc.
+        """
         enemy_armies = []
         for player_name, player in self.players.items():
             # get income
@@ -677,6 +935,7 @@ class CastleWars(object):
             player.castle.regenerate()
 
     def set_income(self):
+        """ Set income which include land income and castle income. """
         highest_player_position = 0
         for army in self.player.armies:
             if army.position > highest_player_position:
@@ -699,11 +958,17 @@ class CastleWars(object):
         self.computer.income = self.computer.castle_income + LAND_INCOME * computer_land_length
 
     def fight_tick(self, army):
+        """ Perform fight actions per each time tick.
+
+        Args:
+            - `army`: instance of Army
+        """
         for unit in army.units:
             unit.attack()
         army.refresh_units_target()
 
     def show_game_stats(self):
+        """ Print simple game statistics after game is over. """
         print('Game statistics\n')
         print('-= Player =-\n')
         print('Gold earned: %s\n' % (self.player.gold_earned,))
@@ -713,6 +978,11 @@ class CastleWars(object):
         print('Kills: %10s   Deaths: %10s\n' % (self.computer.kills, self.computer.deaths))
 
     def game_over(self, message):
+        """ Actions to be done on game over.
+
+        Args:
+            - `message`: str, win/loose message
+        """
         os.system('clear')
         print(message)
         self.show_game_stats()
@@ -730,15 +1000,18 @@ class CastleWars(object):
             self.game_over('You win!\n')
 
     def exit(self):
+        """ Actions to perform on exit. """
         sys.exit(0)
 
     def draw_scene(self):
+        """ Draw scene on each time tick. """
         os.system('clear')
         self.draw_game_field()
         self.print_status()
         self.print_short_help()
 
     def start(self):
+        """ Start and run game in endless loop. """
         while True:
             self.draw_scene()
             self.make_turn()
