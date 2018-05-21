@@ -628,7 +628,7 @@ class CastleWars(object):
             - `count`: amount of same actions must be performed
         """
         if choice == 'q':
-            self.exit()
+            self.exit(confirm=True)
         elif choice == 'e':
             return "end_turn"
         elif choice == 'h':
@@ -783,7 +783,7 @@ class CastleWars(object):
     def choose_computer_strategy(self):
         """ Choose computer strategy in percentage.
 
-        Build different strategies in dependency on situation.
+        Build different strategies depending on situation.
 
         Return:
             dict, represents computer strategy in percentage
@@ -1001,8 +1001,11 @@ class CastleWars(object):
         if self.castles['computer'].hp == 0:
             self.game_over('You win!\n')
 
-    def exit(self):
+    def exit(self, confirm=False):
         """ Actions to perform on exit. """
+        if not confirm:
+            sys.exit(0)
+
         confirm = input('Are you sure you want to exit? (y/n): ')
         if confirm.lower() == 'y':
             sys.exit(0)
