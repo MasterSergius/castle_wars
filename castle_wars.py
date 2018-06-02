@@ -388,6 +388,120 @@ class Player(object):
         if attr == 'hp':
             self.castle.max_hp += CASTLE_UPGRADES['hp'] * count
 
+    def show_upgrades(self):
+        """ Print current player's upgrades.
+
+        Args:
+            - `player`: str, player or computer
+        """
+        print("\nUnit upgrades: ")
+        print("hp: %s (%s level)" % (self.unit_hp,
+                                     self.unit_hp_lvl))
+        print("dmg: %s (%s level)" % (self.unit_dmg,
+                                      self.unit_dmg_lvl))
+        print("attack speed: %.1f (%s level)" % (self.unit_attack_speed,
+                                               self.unit_attack_speed_lvl))
+        print("regen: %s (%s level)" % (self.unit_regen,
+                                        self.unit_regen_lvl))
+        print("\nCastle upgrades: ")
+        print("income: %s (%s level)" % (self.castle_income,
+                                     self.castle_income_lvl))
+        print("dmg: %s (%s level)" % (self.castle_dmg,
+                                      self.castle_dmg_lvl))
+        print("regen: %s (%s level)" % (self.castle_regen,
+                                        self.castle_regen_lvl))
+        print("hp: %s (%s level)" % (self.castle.max_hp,
+                                        self.castle_hp_lvl))
+        input("\nPress Enter to continue")
+
+    def player_action(self, choice, count):
+        """ Perform player's action according to his choice.
+
+        Args:
+            - `choice`: str, one character related to menu item
+            - `count`: amount of same actions must be performed
+        """
+        if choice == 'q':
+            self.exit(confirm=True)
+        elif choice == 'e':
+            return "end_turn"
+        elif choice == 'h':
+            os.system("clear")
+            help()
+        elif choice == 's':
+            self.show_upgrades()
+        elif choice == 'i':
+            self.enemy.show_upgrades()
+        elif choice == 'b':
+            self.build_spawn(count=count)
+        elif choice == '1':
+            self.upgrade_units_attr('hp', count=count)
+        elif choice == '2':
+            self.upgrade_units_attr('dmg', count=count)
+        elif choice == '3':
+            self.upgrade_units_attr('attack_speed', count=count)
+        elif choice == '4':
+            self.upgrade_units_attr('regen', count=count)
+        elif choice == '5':
+            self.upgrade_castle_attr('income', count=count)
+        elif choice == '6':
+            self.upgrade_castle_attr('dmg', count=count)
+        elif choice == '7':
+            self.upgrade_castle_attr('regen', count=count)
+        elif choice == '8':
+            self.upgrade_castle_attr('hp', count=count)
+
+    def prompt(self):
+        """Ask player to make his game choices.
+
+        Return:
+            tuple (choice, count) - parsed user input
+
+        Example:
+            b - build one spawn
+            b*2 - build two spawns
+            b** - build spawns for all available gold
+        """
+        choice = input("Your choice > ")
+        count = 1
+        if '**' in choice:
+            # all choices - should be one char length
+            choice = choice[0]
+            count = 'max'
+        elif '*' in choice:
+            try:
+                choice, count = choice.split('*')
+                choice = choice.strip()
+                count = int(count)
+            except:
+                print("Wrong input!\n")
+                print("Press Enter to Continue")
+                return None
+        return self.player_action(choice, count)
+
+    def make_turn(self, draw_scene):
+        """ Make player's turn.
+
+        Player will be asked to make choice till player choose 'end turn'.
+        After this computer will make its turn.
+        """
+        while True:
+            value = self.prompt()
+            draw_scene()
+            if value == 'end_turn':
+                break
+
+
+class EnemyView(object):
+
+    """ Class designed to provide interface to view enemy upgrades. """
+
+    def __init__(self, player):
+        self.__player = player
+
+    def show_upgrades(self):
+        self.__player.show_upgrades()
+
 
 class Unit(GameObject):
 
@@ -708,6 +822,8 @@ class CastleWars(object):
         self.computer = AIPlayer(castle=self.castle_computer, player_name='computer')
         self.castles = {'player': self.castle_player, 'computer': self.castle_computer}
         self.players = {'player': self.player, 'computer': self.computer}
+        self.player.enemy = EnemyView(self.computer)
+        self.computer.enemy = EnemyView(self.player)
         self.income_line = INCOME_LINE
         self.player_health_line = HEALTH_LINE
         self.computer_health_line = HEALTH_LINE
@@ -758,109 +874,6 @@ class CastleWars(object):
         This short help is always visible below game stats.
         """
         print(SHORT_HELP_STRING)
-
-    def show_upgrades(self, player):
-        """ Print current player's upgrades.
-
-        Args:
-            - `player`: str, player or computer
-        """
-        print("\nUnit upgrades: ")
-        print("hp: %s (%s level)" % (self.players[player].unit_hp,
-                                     self.players[player].unit_hp_lvl))
-        print("dmg: %s (%s level)" % (self.players[player].unit_dmg,
-                                      self.players[player].unit_dmg_lvl))
-        print("attack speed: %.1f (%s level)" % (self.players[player].unit_attack_speed,
-                                               self.players[player].unit_attack_speed_lvl))
-        print("regen: %s (%s level)" % (self.players[player].unit_regen,
-                                        self.players[player].unit_regen_lvl))
-        print("\nCastle upgrades: ")
-        print("income: %s (%s level)" % (self.players[player].castle_income,
-                                     self.players[player].castle_income_lvl))
-        print("dmg: %s (%s level)" % (self.players[player].castle_dmg,
-                                      self.players[player].castle_dmg_lvl))
-        print("regen: %s (%s level)" % (self.players[player].castle_regen,
-                                        self.players[player].castle_regen_lvl))
-        print("hp: %s (%s level)" % (self.castles[player].max_hp,
-                                        self.players[player].castle_hp_lvl))
-        input("\nPress Enter to continue")
-
-    def player_action(self, choice, count):
-        """ Perform player's action according to his choice.
-
-        Args:
-            - `choice`: str, one character related to menu item
-            - `count`: amount of same actions must be performed
-        """
-        if choice == 'q':
-            self.exit(confirm=True)
-        elif choice == 'e':
-            return "end_turn"
-        elif choice == 'h':
-            os.system("clear")
-            help()
-        elif choice == 's':
-            self.show_upgrades('player')
-        elif choice == 'i':
-            self.show_upgrades('computer')
-        elif choice == 'b':
-            self.player.build_spawn(count=count)
-        elif choice == '1':
-            self.player.upgrade_units_attr('hp', count=count)
-        elif choice == '2':
-            self.player.upgrade_units_attr('dmg', count=count)
-        elif choice == '3':
-            self.player.upgrade_units_attr('attack_speed', count=count)
-        elif choice == '4':
-            self.player.upgrade_units_attr('regen', count=count)
-        elif choice == '5':
-            self.player.upgrade_castle_attr('income', count=count)
-        elif choice == '6':
-            self.player.upgrade_castle_attr('dmg', count=count)
-        elif choice == '7':
-            self.player.upgrade_castle_attr('regen', count=count)
-        elif choice == '8':
-            self.player.upgrade_castle_attr('hp', count=count)
-
-    def prompt(self):
-        """Ask player to make his game choices.
-
-        Return:
-            tuple (choice, count) - parsed user input
-
-        Example:
-            b - build one spawn
-            b*2 - build two spawns
-            b** - build spawns for all available gold
-        """
-        choice = input("Your choice > ")
-        count = 1
-        if '**' in choice:
-            # all choices - should be one char length
-            choice = choice[0]
-            count = 'max'
-        elif '*' in choice:
-            try:
-                choice, count = choice.split('*')
-                choice = choice.strip()
-                count = int(count)
-            except:
-                print("Wrong input!\n")
-                print("Press Enter to Continue")
-                return None
-        return self.player_action(choice, count)
-
-    def make_turn(self):
-        """ Make player's turn.
-
-        Player will be asked to make choice till player choose 'end turn'.
-        After this computer will make its turn.
-        """
-        while True:
-            value = self.prompt()
-            self.draw_scene()
-            if value == 'end_turn':
-                break
 
     def finish_turn(self):
         """ Finish turn for player and computer.
@@ -1027,7 +1040,7 @@ class CastleWars(object):
         """ Start and run game in endless loop. """
         while True:
             self.draw_scene()
-            self.make_turn()
+            self.player.make_turn(self.draw_scene)
             self.computer.make_turn()
             self.finish_turn()
 
