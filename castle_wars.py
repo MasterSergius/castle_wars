@@ -43,6 +43,16 @@ def help():
         page += 1
 
 
+def exit(confirm=False):
+    """ Actions to perform on exit. """
+    if not confirm:
+        sys.exit(0)
+
+    confirm = input('Are you sure you want to exit? (y/n): ')
+    if confirm.lower() == 'y':
+        sys.exit(0)
+
+
 def convert_percentage(percentage):
     """ Build correct dict for random choice from percentage.
 
@@ -422,7 +432,7 @@ class Player(object):
             - `count`: amount of same actions must be performed
         """
         if choice == 'q':
-            self.exit(confirm=True)
+            exit(confirm=True)
         elif choice == 'e':
             return "end_turn"
         elif choice == 'h':
@@ -1008,7 +1018,7 @@ class CastleWars(object):
         print(message)
         self.show_game_stats()
         input("Press Enter to exit")
-        self.exit()
+        exit()
 
     def check_game_over(self):
         """ Check if any castle has hp equals 0.
@@ -1019,15 +1029,6 @@ class CastleWars(object):
 
         if self.castles['computer'].hp == 0:
             self.game_over('You win!\n')
-
-    def exit(self, confirm=False):
-        """ Actions to perform on exit. """
-        if not confirm:
-            sys.exit(0)
-
-        confirm = input('Are you sure you want to exit? (y/n): ')
-        if confirm.lower() == 'y':
-            sys.exit(0)
 
     def draw_scene(self):
         """ Draw scene on each time tick. """
