@@ -89,8 +89,9 @@ Unit must have %(attack_rate)s attack rate to make damage.
 
 <= Spawns =>
 Units spawn once per %(spawn_rate)s turns and move towards enemy's castle. Each
-spawn can produce one unit, but you must have enough gold for it. Each upgrade
-give +%(upgrade_gold_reward)s to unit price.
+spawn can produce one unit, but you must have enough gold for it. Income will
+transformed to gold each turn before units spawn, so players should count it
+also. Each upgrade give +%(upgrade_gold_reward)s to unit price.
 Basic unit price - %(unit_price)s gold.
 
 <= Income & Gold =>

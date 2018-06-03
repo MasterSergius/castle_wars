@@ -270,7 +270,6 @@ class Player(object):
         self.castle_dmg_lvl = 0
         self.castle_regen_lvl = 0
         self.castle_hp_lvl = 0
-        self.spawn_rate = SPAWN_RATE
 
     def spawn_units(self):
         """ Spawn unit from each player spawn with current upgrades.
@@ -279,21 +278,16 @@ class Player(object):
             list, spawned units if it is time, None otherwise
         """
         units = []
-        if self.spawn_rate == SPAWN_RATE:
-            parameters = {'hp': self.unit_hp, 'dmg': self.unit_dmg,
-                          'speed': self.unit_speed, 'regen': self.unit_regen,
-                          'attack_speed': self.unit_attack_speed,
-                          'gold_reward': self.unit_gold_reward}
-            for unit in range(self.spawns):
-                if self.gold >= self.unit_price:
-                    units.append(Unit(**parameters))
-                    self.gold -= self.unit_price
-                else:
-                    break
-            if units:
-                self.spawn_rate = 0
-        else:
-            self.spawn_rate += 1
+        parameters = {'hp': self.unit_hp, 'dmg': self.unit_dmg,
+                      'speed': self.unit_speed, 'regen': self.unit_regen,
+                      'attack_speed': self.unit_attack_speed,
+                      'gold_reward': self.unit_gold_reward}
+        for unit in range(self.spawns):
+            if self.gold >= self.unit_price:
+                units.append(Unit(**parameters))
+                self.gold -= self.unit_price
+            else:
+                break
         return units
 
     def union_armies(self, army1, army2):
@@ -812,8 +806,13 @@ class AIPlayer(Player):
             self.upgrade_castle_attr('hp')
         return True
 
-    def make_turn(self):
-        """ Simulate AI turn. """
+    def make_turn(self, turns_to_spawn):
+        """ Simulate AI turn.
+
+        Args:
+            - `turns_to_spawn`: int, count of turns before new spawn
+
+        """
         costs = self.spawns * self.unit_price
         while self.gold + self.income > costs:
             success = self.computer_action()
@@ -837,6 +836,7 @@ class CastleWars(object):
         self.income_line = INCOME_LINE
         self.player_health_line = HEALTH_LINE
         self.computer_health_line = HEALTH_LINE
+        self.spawn_rate = SPAWN_RATE_IN_TURNS
 
     def put_in_position(self, pic, position, player_name):
         """ Put image of army, health, etc. in apropriate position on screen.
@@ -875,8 +875,9 @@ class CastleWars(object):
         print(status_line % (self.player.gold, self.player.income,
                              self.player.spawns, self.player.kills,
                              self.player.deaths))
-        print("Current unit price: %s\tGold needed to spawn all: %s\n" %
-              (self.player.unit_price, self.player.unit_price * self.player.spawns))
+        print("Current unit price: %s\tGold needed to spawn all: %s\tTurns to spawn: %s\n" %
+              (self.player.unit_price, self.player.unit_price * self.player.spawns,
+               SPAWN_RATE_IN_TURNS - self.spawn_rate))
 
     def print_short_help(self):
         """ Print short help with list of possible actions.
@@ -885,23 +886,12 @@ class CastleWars(object):
         """
         print(SHORT_HELP_STRING)
 
-    def finish_turn(self):
-        """ Finish turn for player and computer.
-
-        Spawn units, move armies, get income, etc.
-        """
-        enemy_armies = []
-        for player_name, player in self.players.items():
-            # get income
-            player.add_gold(player.income)
-
-        # move armies or fight
-        for tick in range(TIME_TICKS_PER_TURN):
-            self.player_health_line = HEALTH_LINE
-            self.computer_health_line = HEALTH_LINE
+    def spawn_units(self):
+        """ Spawn units and create new army. """
+        if self.spawn_rate == SPAWN_RATE_IN_TURNS:
             for player_name, player in self.players.items():
-                # spawn new units
                 units = player.spawn_units()
+                self.spawn_rate = 0
                 if units:
                     position = PLAYER_POSITIONS[player_name]
                     movement = PLAYER_MOVEMENTS[player_name]
@@ -915,42 +905,66 @@ class CastleWars(object):
                                     units=units, enemy_castle=enemy_castle,
                                     enemy=enemy)
                     player.armies.append(new_army)
+        else:
+            self.spawn_rate += 1
 
-                # get list of enemy armies
-                if player_name == 'player':
-                    enemy_armies = self.players['computer'].armies
+    def add_gold_as_income(self):
+        """ Add gold to players as their income. """
+        for player_name, player in self.players.items():
+            # get income
+            player.add_gold(player.income)
+
+    def move_armies(self):
+        """ Move players' armies, fight, remove dead armies. """
+        enemy_armies = []
+        self.player_health_line = HEALTH_LINE
+        self.computer_health_line = HEALTH_LINE
+        for player_name, player in self.players.items():
+            # get list of enemy armies
+            if player_name == 'player':
+                enemy_armies = self.players['computer'].armies
+            else:
+                enemy_armies = self.players['player'].armies
+            # check for fight
+            for army in player.armies:
+                # enemy's army is preferable target
+                if army.has_target() and isinstance(army.target, Castle):
+                    army.get_target(enemy_armies)
+                if army.has_target() or army.get_target(enemy_armies):
+                    self.fight_tick(army)
                 else:
-                    enemy_armies = self.players['player'].armies
-                # check for fight
-                for army in player.armies:
-                    # enemy's army is preferable target
-                    if army.has_target() and isinstance(army.target, Castle):
-                        army.get_target(enemy_armies)
-                    if army.has_target() or army.get_target(enemy_armies):
-                        self.fight_tick(army)
-                    else:
-                        army.move()
-                        army.refresh_attack_rate()
-                        player.check_armies_collision(army)
-                    if player_name == 'player':
-                        self.player_health_line = put_substr_in_position(str(army.hp),
-                                                                         army.position,
-                                                                         self.player_health_line)
-                    else:
-                        self.computer_health_line = put_substr_in_position(str(army.hp),
-                                                                           army.position,
-                                                                           self.computer_health_line)
-                # check if castle can attack
-                if player.castle.has_target() or player.castle.get_target(enemy_armies):
-                    player.castle.attack()
+                    army.move()
+                    army.refresh_attack_rate()
+                    player.check_armies_collision(army)
+                if player_name == 'player':
+                    self.player_health_line = put_substr_in_position(str(army.hp),
+                                                                     army.position,
+                                                                     self.player_health_line)
+                else:
+                    self.computer_health_line = put_substr_in_position(str(army.hp),
+                                                                       army.position,
+                                                                       self.computer_health_line)
+            # check if castle can attack
+            if player.castle.has_target() or player.castle.get_target(enemy_armies):
+                player.castle.attack()
 
-            for player in self.players.values():
-                for army in player.armies:
-                    # remove dead units and armies
-                    dead = army.remove_dead_units()
-                    player.deaths += dead
-                player.remove_dead_armies()
+        for player in self.players.values():
+            for army in player.armies:
+                # remove dead units and armies
+                dead = army.remove_dead_units()
+                player.deaths += dead
+            player.remove_dead_armies()
 
+    def finish_turn(self):
+        """ Finish turn for player and computer.
+
+        Spawn units, move armies, get income, etc.
+        """
+        self.add_gold_as_income()
+        self.spawn_units()
+
+        for tick in range(TIME_TICKS_PER_TURN):
+            self.move_armies()
             self.check_game_over()
             # small sleep to simulate animation
             time.sleep(1/TIME_TICKS_PER_TURN)
@@ -1042,7 +1056,7 @@ class CastleWars(object):
         while True:
             self.draw_scene()
             self.player.make_turn(self.draw_scene)
-            self.computer.make_turn()
+            self.computer.make_turn(SPAWN_RATE_IN_TURNS - self.spawn_rate)
             self.finish_turn()
 
 
