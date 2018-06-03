@@ -806,6 +806,11 @@ class AIPlayer(Player):
             self.upgrade_castle_attr('hp')
         return True
 
+    def is_enough_gold(self, turns_to_spawn):
+        """ Check if computer will have enough gold to spawn units. """
+        costs = self.spawns * self.unit_price
+        return self.gold + (self.income * turns_to_spawn + 1) > costs
+
     def make_turn(self, turns_to_spawn):
         """ Simulate AI turn.
 
@@ -813,8 +818,7 @@ class AIPlayer(Player):
             - `turns_to_spawn`: int, count of turns before new spawn
 
         """
-        costs = self.spawns * self.unit_price
-        while self.gold + self.income > costs:
+        while self.is_enough_gold(turns_to_spawn):
             success = self.computer_action()
             if not success:
                 break
