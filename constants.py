@@ -167,3 +167,14 @@ def short_help_string():
     return short_help
 
 SHORT_HELP_STRING = short_help_string()
+
+UPGRADES_TEMPLATE = """\nUnit upgrades:
+hp: %(unit_hp)s (%(unit_hp_lvl)s level)
+dmg: %(unit_dmg)s (%(unit_dmg_lvl)s level)
+attack speed: %(unit_as).1f (%(unit_as_lvl)s level)
+regen: %(unit_regen)s (%(unit_regen_lvl)s level)
+\nCastle upgrades:
+income: %(castle_income)s (%(castle_income_lvl)s level)
+dmg: %(castle_dmg)s (%(castle_dmg_lvl)s level)
+regen: %(castle_regen)s (%(castle_regen_lvl)s level)
+hp: %(castle_hp)s (%(castle_hp_lvl)s level)"""

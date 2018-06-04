@@ -270,6 +270,7 @@ class Player(object):
         self.castle_dmg_lvl = 0
         self.castle_regen_lvl = 0
         self.castle_hp_lvl = 0
+        self.player_view = PlayerView(self)
 
     def spawn_units(self):
         """ Spawn unit from each player spawn with current upgrades.
@@ -393,30 +394,8 @@ class Player(object):
             self.castle.max_hp += CASTLE_UPGRADES['hp'] * count
 
     def show_upgrades(self):
-        """ Print current player's upgrades.
-
-        Args:
-            - `player`: str, player or computer
-        """
-        print("\nUnit upgrades: ")
-        print("hp: %s (%s level)" % (self.unit_hp,
-                                     self.unit_hp_lvl))
-        print("dmg: %s (%s level)" % (self.unit_dmg,
-                                      self.unit_dmg_lvl))
-        print("attack speed: %.1f (%s level)" % (self.unit_attack_speed,
-                                               self.unit_attack_speed_lvl))
-        print("regen: %s (%s level)" % (self.unit_regen,
-                                        self.unit_regen_lvl))
-        print("\nCastle upgrades: ")
-        print("income: %s (%s level)" % (self.castle_income,
-                                     self.castle_income_lvl))
-        print("dmg: %s (%s level)" % (self.castle_dmg,
-                                      self.castle_dmg_lvl))
-        print("regen: %s (%s level)" % (self.castle_regen,
-                                        self.castle_regen_lvl))
-        print("hp: %s (%s level)" % (self.castle.max_hp,
-                                        self.castle_hp_lvl))
-        input("\nPress Enter to continue")
+        """ Show player upgrades. """
+        self.player_view.show_upgrades()
 
     def player_action(self, choice, count):
         """ Perform player's action according to his choice.
@@ -496,15 +475,45 @@ class Player(object):
                 break
 
 
-class EnemyView(object):
+class PlayerView(object):
 
-    """ Class designed to provide interface to view enemy upgrades. """
+    """ Class designed to provide interface to view player upgrades. """
 
     def __init__(self, player):
         self.__player = player
 
+    def get_player_stats(self):
+        """ Get all player upgrades, buildings and hp.
+
+        Used for building computer strategy. The same info player can see
+        on screen.
+
+        Return:
+            dict, which represents player stats
+        """
+        return {'unit_hp': self.__player.unit_hp,
+                'unit_hp_lvl': self.__player.unit_hp_lvl,
+                'unit_dmg': self.__player.unit_dmg,
+                'unit_dmg_lvl': self.__player.unit_dmg_lvl,
+                'unit_as': self.__player.unit_attack_speed,
+                'unit_as_lvl': self.__player.unit_attack_speed_lvl,
+                'unit_regen': self.__player.unit_regen,
+                'unit_regen_lvl': self.__player.unit_regen_lvl,
+                'castle_income': self.__player.castle_income,
+                'castle_income_lvl': self.__player.castle_income_lvl,
+                'castle_dmg': self.__player.castle_dmg,
+                'castle_dmg_lvl': self.__player.castle_dmg_lvl,
+                'castle_regen': self.__player.castle_regen,
+                'castle_regen_lvl': self.__player.castle_regen_lvl,
+                'castle_hp': self.__player.castle.max_hp,
+                'castle_hp_lvl': self.__player.castle_hp_lvl,
+                'spawns': self.__player.spawns}
+
     def show_upgrades(self):
-        self.__player.show_upgrades()
+        """ Show player upgrades. """
+        player_stats = self.get_player_stats()
+        print(UPGRADES_TEMPLATE % player_stats)
+        input("\nPress Enter to continue")
 
 
 class Unit(GameObject):
@@ -835,8 +844,8 @@ class CastleWars(object):
         self.computer = AIPlayer(castle=self.castle_computer, player_name='computer')
         self.castles = {'player': self.castle_player, 'computer': self.castle_computer}
         self.players = {'player': self.player, 'computer': self.computer}
-        self.player.enemy = EnemyView(self.computer)
-        self.computer.enemy = EnemyView(self.player)
+        self.player.enemy = PlayerView(self.computer)
+        self.computer.enemy = PlayerView(self.player)
         self.income_line = INCOME_LINE
         self.player_health_line = HEALTH_LINE
         self.computer_health_line = HEALTH_LINE
