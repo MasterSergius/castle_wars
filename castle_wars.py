@@ -4,6 +4,7 @@
 #
 # Author: Master Sergius <master.sergius@gmail.com>
 
+import copy
 import math
 import os
 import random
@@ -13,13 +14,6 @@ import time
 from abc import ABCMeta, abstractmethod
 
 from constants import *
-
-
-#TODO: remove log function
-def log(string):
-    """ Temporary logging for dev/debug purposes """
-    with open('/tmp/castle_wars.log', 'a') as f:
-        f.write('%s\n' % (string,))
 
 
 def help():
@@ -147,6 +141,90 @@ def get_enemy_army_in_position(position, enemy_armies):
     return None
 
 
+class GameStats(object):
+
+    """ Class designed to keep all game statistic and show after game over.
+
+    This class must be declared before all other classes.
+    """
+
+    player = copy.copy(STATISTICS_PARAMS)
+    computer = copy.copy(STATISTICS_PARAMS)
+
+    @staticmethod
+    def enemy(player_name):
+        """Return name of enemy of given player.
+
+        Args:
+            - player_name, str
+
+        Return:
+            - str, enemy player's name
+        """
+        return 'player' if player_name == 'computer' else 'computer'
+
+    @staticmethod
+    def update_damage_stats(f):
+        """ Update damage dealt to units statistics. Decorator.
+
+        Args:
+            f: method, which receive damage to units
+        """
+        def inner(*args):
+            player = getattr(GameStats, GameStats.enemy(args[0].owner))
+            player['dmg_dealt_to_units'] += args[1]
+            return f(*args)
+        return inner
+
+    @staticmethod
+    def update_castle_damage_stats(f):
+        """ Update damage dealt to castle statistics. Decorator.
+
+        Args:
+            f: method, which receive damage to castle
+        """
+        def inner(*args):
+            player = getattr(GameStats, GameStats.enemy(args[0].owner))
+            player['dmg_dealt_to_castle'] += args[1]
+            return f(*args)
+        return inner
+
+    @staticmethod
+    def update_kills_and_deaths_stats(f):
+        """ Update killed units statistics. Decorator.
+
+        Args:
+            f: method, which count dead enemy units
+        """
+        def inner(*args):
+            player = getattr(GameStats, args[0].enemy.name)
+            dead = f(*args)
+            player['kills'] += dead
+            return dead
+        return inner
+
+    @staticmethod
+    def update_gold_stats(f):
+        """ Update earned gold statistics. Decorator.
+
+        Args:
+            f: method, which add gold to players
+        """
+        def inner(*args):
+            player = getattr(GameStats, args[0].name)
+            player['gold_earned'] += args[1]
+            return f(*args)
+        return inner
+
+    @staticmethod
+    def show_statistics():
+        """ Print game statistics along with players' names. """
+        GameStats.player['name'] = 'player'
+        GameStats.computer['name'] = 'computer'
+        print(STATISTICS_TEMPLATE % (PLAYER_STATISTICS_TEMPLATE % GameStats.player,
+                                     PLAYER_STATISTICS_TEMPLATE % GameStats.computer))
+
+
 class GameObject(metaclass=ABCMeta):
 
     """Abstract class which is base class for all game objects."""
@@ -156,6 +234,7 @@ class GameObject(metaclass=ABCMeta):
         """Method must be overriden in child class."""
         pass
 
+    @GameStats.update_damage_stats
     def get_damage(self, damage):
         """Recieve damage from enemy unit or castle.
 
@@ -180,7 +259,8 @@ class Castle(GameObject):
 
     """Class represents player's castle."""
 
-    def __init__(self, hp=CASTLE_HP, dmg=0, regen=0, position=0, direction=0):
+    def __init__(self, hp=CASTLE_HP, dmg=0, regen=0, position=0, direction=0,
+                 player_name=None):
         self.hp = hp
         self.max_hp = hp
         self.position = position
@@ -189,6 +269,7 @@ class Castle(GameObject):
         self.income = 0
         self.direction = direction
         self.target = None
+        self.owner = player_name
 
     def has_target(self):
         """Check if castle has target to attack.
@@ -225,6 +306,7 @@ class Castle(GameObject):
             if self.target.hp == 0:
                 self.target = None
 
+    @GameStats.update_castle_damage_stats
     def get_damage(self, damage):
         """ Castle receive only small percentage of damage.
 
@@ -233,7 +315,11 @@ class Castle(GameObject):
         damage = damage * CASTLE_RECEIVE_DAMAGE
         if damage == 0:
             damage = 1
-        super().get_damage(damage)
+
+        # Can't use super to separate game stats
+        self.hp -= damage
+        if self.hp < 0:
+            self.hp = 0
 
 
 class Player(object):
@@ -282,7 +368,8 @@ class Player(object):
         parameters = {'hp': self.unit_hp, 'dmg': self.unit_dmg,
                       'speed': self.unit_speed, 'regen': self.unit_regen,
                       'attack_speed': self.unit_attack_speed,
-                      'gold_reward': self.unit_gold_reward}
+                      'gold_reward': self.unit_gold_reward,
+                      'owner': self.name}
         for unit in range(self.spawns):
             if self.gold >= self.unit_price:
                 units.append(Unit(**parameters))
@@ -319,6 +406,7 @@ class Player(object):
         alive = [army for army in self.armies if army.units]
         self.armies = alive[:]
 
+    @GameStats.update_gold_stats
     def add_gold(self, gold):
         """ Add given gold amount to player's total gold.
 
@@ -522,7 +610,7 @@ class Unit(GameObject):
 
     def __init__(self, hp=UNIT_HP, dmg=UNIT_DMG, speed=UNIT_SPD,
                  attack_speed=UNIT_ATSPD, regen=UNIT_REGEN,
-                 gold_reward=REWARD_FOR_KILLING):
+                 gold_reward=REWARD_FOR_KILLING, owner=None):
         self.hp = hp
         self.max_hp = hp
         self.dmg = dmg
@@ -532,6 +620,7 @@ class Unit(GameObject):
         self.attack_rate = ATTACK_RATE if ATTACK_RATE > self.attack_speed else self.attack_speed
         self.target = None
         self.gold_reward = gold_reward
+        self.owner = owner
 
 
     def has_target(self):
@@ -681,6 +770,7 @@ class Army(object):
         for unit in self.units:
             unit.refresh_attack_rate()
 
+    @GameStats.update_kills_and_deaths_stats
     def remove_dead_units(self):
         """ Remove dead units from army.
 
@@ -752,7 +842,7 @@ class AIPlayer(Player):
             dict, represents computer strategy in percentage
         """
         # setup basic strategy
-        percentage = {'spawn':35, 'income':30, 'unit_hp':10, 'unit_dmg':10,
+        percentage = {'spawn':25, 'income':40, 'unit_hp':10, 'unit_dmg':10,
                       'unit_attack_speed':10, 'unit_regen':5}
 
         if self.spawns == 0:
@@ -760,19 +850,46 @@ class AIPlayer(Player):
         elif self.income < 5000:
             percentage = {'income':90, 'spawn':5, 'unit_hp':2, 'unit_dmg':1,
                           'unit_attack_speed':1, 'unit_regen':1}
+        elif self.income < 10000:
+            percentage = {'income':60, 'spawn':10, 'unit_hp':10, 'unit_dmg':10,
+                          'unit_attack_speed':9, 'unit_regen':1}
         elif self.unit_hp_lvl < 4:
             percentage = {'spawn':30, 'income':35, 'unit_hp':15,
                           'unit_dmg':10, 'unit_attack_speed':10}
         elif self.spawns > 2:
-            percentage = {'spawn':10, 'income':35, 'unit_hp':15,
-                          'unit_dmg':20, 'unit_attack_speed':15,
+            percentage = {'spawn':10, 'income':45, 'unit_hp':15,
+                          'unit_dmg':15, 'unit_attack_speed':10,
                           'unit_regen':5}
+
+        # improvement
+        enemy_stats = self.enemy.get_player_stats()
+        enemy_unit_lvl = enemy_stats['unit_hp_lvl'] + \
+                         enemy_stats['unit_dmg_lvl'] + \
+                         enemy_stats['unit_as_lvl'] + \
+                         enemy_stats['unit_regen_lvl']
+
+        if enemy_unit_lvl > 200:
+            percentage = {'spawn':10, 'income':50, 'unit_hp':10,
+                          'unit_dmg':10, 'unit_attack_speed':10,
+                          'unit_regen':10}
+        if enemy_unit_lvl > 500:
+            percentage = {'spawn':10, 'income':45, 'unit_hp':10,
+                          'unit_dmg':10, 'unit_attack_speed':10,
+                          'unit_regen':10, 'castle_hp': 5}
+        if enemy_unit_lvl > 1000:
+            percentage = {'spawn':20, 'income':40, 'unit_hp':10,
+                          'unit_dmg':10, 'unit_attack_speed':10,
+                          'castle_hp': 10}
+        if enemy_unit_lvl > 2000:
+            percentage = {'spawn':20, 'income':30, 'unit_hp':10,
+                          'unit_dmg':10, 'unit_attack_speed':10,
+                          'castle_dmg':5, 'castle_hp': 15}
 
         # castle rescue
         if self.castle.hp < CASTLE_HP:
             percentage = {'spawn':10, 'income':10, 'unit_hp':10,
                           'unit_dmg':10, 'unit_attack_speed':10,
-                          'castle_dmg':30, 'castle_regen':20}
+                          'castle_dmg':40, 'castle_regen':10}
         if self.castle.hp < CASTLE_HP * 0.9:
             percentage = {'spawn':1, 'income':1, 'unit_hp':1,
                           'unit_dmg':1, 'unit_attack_speed':1,
@@ -838,9 +955,9 @@ class CastleWars(object):
     """ Class designed to control game flow. """
 
     def __init__(self):
-        self.castle_player = Castle(position=0, direction=1)
+        self.castle_player = Castle(position=0, direction=1, player_name='player')
         self.player = Player(castle=self.castle_player, player_name='player')
-        self.castle_computer = Castle(position=DISTANCE+1, direction=-1)
+        self.castle_computer = Castle(position=DISTANCE+1, direction=-1, player_name='computer')
         self.computer = AIPlayer(castle=self.castle_computer, player_name='computer')
         self.castles = {'player': self.castle_player, 'computer': self.castle_computer}
         self.players = {'player': self.player, 'computer': self.computer}
@@ -1027,13 +1144,7 @@ class CastleWars(object):
 
     def show_game_stats(self):
         """ Print simple game statistics after game is over. """
-        print('Game statistics\n')
-        print('-= Player =-\n')
-        print('Gold earned: %s\n' % (self.player.gold_earned,))
-        print('Kills: %10s   Deaths: %10s\n' % (self.player.kills, self.player.deaths))
-        print('-= Computer =-\n')
-        print('Gold earned: %s\n' % (self.computer.gold_earned,))
-        print('Kills: %10s   Deaths: %10s\n' % (self.computer.kills, self.computer.deaths))
+        GameStats.show_statistics()
 
     def game_over(self, message):
         """ Actions to be done on game over.

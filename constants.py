@@ -178,3 +178,17 @@ income: %(castle_income)s (%(castle_income_lvl)s level)
 dmg: %(castle_dmg)s (%(castle_dmg_lvl)s level)
 regen: %(castle_regen)s (%(castle_regen_lvl)s level)
 hp: %(castle_hp)s (%(castle_hp_lvl)s level)"""
+
+STATISTICS_PARAMS = {'dmg_dealt_to_castle': 0,
+                     'dmg_dealt_to_units': 0,
+                     'kills': 0,
+                     'gold_earned': 0}
+
+STATISTICS_TEMPLATE = """ Game statistics:
+
+Player name     Gold earned     Kills    Damage to units    Damage to Castle
+%s
+%s
+"""
+
+PLAYER_STATISTICS_TEMPLATE = "%(name)10s %(gold_earned)15s %(kills)10s %(dmg_dealt_to_units)15s %(dmg_dealt_to_castle)15s"
