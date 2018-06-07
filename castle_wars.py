@@ -79,6 +79,22 @@ def get_enemy_army_in_position(position, enemy_armies):
     return None
 
 
+def prettify_number(number):
+    """ Prettify long number by separating groups with 3 digits.
+
+    Args:
+        - `number`: int
+
+    Return:
+        str
+
+    Example:
+        >>> prettify_number(10000)
+        '10,000'
+    """
+    return '{:,}'.format(number)
+
+
 class GameStats(object):
 
     """ Class designed to keep all game statistic and show after game over.
@@ -1022,11 +1038,14 @@ class CastleWars(object):
     def print_status(self):
         """ Print status line with players stats. """
         status_line = "Gold: %s   Income: %s   Spawns: %s   Kills: %s   Deaths: %s\n"
-        print(status_line % (self.player.gold, self.player.income,
-                             self.player.spawns, self.player.kills,
-                             self.player.deaths))
+        print(status_line % (prettify_number(self.player.gold),
+                             prettify_number(self.player.income),
+                             prettify_number(self.player.spawns),
+                             prettify_number(self.player.kills),
+                             prettify_number(self.player.deaths)))
         print("Current unit price: %s\tGold needed to spawn all: %s\tTurns to spawn: %s\n" %
-              (self.player.unit_price, self.player.unit_price * self.player.spawns,
+              (prettify_number(self.player.unit_price),
+               prettify_number(self.player.unit_price * self.player.spawns),
                SPAWN_RATE_IN_TURNS - self.spawn_rate))
 
     def print_short_help(self):
