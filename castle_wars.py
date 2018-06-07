@@ -47,68 +47,6 @@ def exit(confirm=False):
         sys.exit(0)
 
 
-def convert_percentage(percentage):
-    """ Build correct dict for random choice from percentage.
-
-    For example, there are three actions, first action must be performed
-    in 20% of all occurance, second in 50% and third in 30%. So, random from
-    1 to 100 should point to correct action. All random numbers 1-20 should
-    point to 1st action (20%), next 50 numbers 21-70 (50%) should point to
-    2nd action and rest 30 numbers 71-100 - 3rd action.
-    Thus, we can build dict with numbers 20, 70, 100 as keys and actions as
-    values and compare random number with keys.
-
-    Args:
-        - `percentage`: dict, represents computer strategy in percentage
-
-    Return:
-        - `dict`, converted percentage to deal with random
-
-    Example:
-        percentage = {'spawn':35, 'income':30,
-                      'unit_hp':10, 'unit_dmg':10,
-                      'unit_attack_speed':10, 'unit_regen':5}
-
-        converted_percentage = {5:'unit_regen', 15:'unit_attack_speed',
-                                25:'unit_dmg', 35: 'unit_hp', 65: 'income',
-                                100: 'spawn'}
-    """
-    strategy = {}
-    number = 0
-    for action in sorted(percentage, key=percentage.get):
-        number += percentage[action]
-        strategy[number] = action
-        if number > 100:
-            os.system('clear')
-            print('Incorrect computer strategy.')
-            input('Press Enter to exit.')
-            sys.exit(0)
-    return strategy
-
-
-def build_computer_strategy(percentage, gold):
-    """Filters possible actions. Leave only those which are affordable.
-
-    After each action computer must rebuild strategy according to gold amount.
-    If some action can't be performed because of lack of gold, it will be
-    dropped and total amount of percentage will decrease by its percentage.
-
-    Args:
-        - `percentage`: dict, represents computer strategy in percentage
-        - `gold`: int, amount of computer player's gold
-
-    Return:
-        tuple (dict, int) - (converted percentage, total percentage (<=100))
-    """
-    total_percentage = 0
-    filtered_percentage = {}
-    for action, percent in percentage.items():
-        if COSTS[action] <= gold:
-            filtered_percentage[action] = percent
-            total_percentage += percent
-    return (convert_percentage(filtered_percentage), total_percentage)
-
-
 def put_substr_in_position(substr, pos, string):
     """Puts substr inside string instead of symbols in defined positions.
 
@@ -833,20 +771,87 @@ class AIPlayer(Player):
             if random_number <= key:
                 return strategy[key]
 
-    def choose_strategy(self):
+    def convert_percentage(self, percentage):
+        """ Build correct dict for random choice from percentage.
+
+        For example, there are three actions, first action must be performed
+        in 20% of all occurance, second in 50% and third in 30%. So, random from
+        1 to 100 should point to correct action. All random numbers 1-20 should
+        point to 1st action (20%), next 50 numbers 21-70 (50%) should point to
+        2nd action and rest 30 numbers 71-100 - 3rd action.
+        Thus, we can build dict with numbers 20, 70, 100 as keys and actions as
+        values and compare random number with keys.
+
+        Args:
+            - `percentage`: dict, represents computer strategy in percentage
+
+        Return:
+            - `dict`, converted percentage to deal with random
+
+        Example:
+            percentage = {'spawn':35, 'income':30,
+                          'unit_hp':10, 'unit_dmg':10,
+                          'unit_attack_speed':10, 'unit_regen':5}
+
+            converted_percentage = {5:'unit_regen', 15:'unit_attack_speed',
+                                    25:'unit_dmg', 35: 'unit_hp', 65: 'income',
+                                    100: 'spawn'}
+        """
+        strategy = {}
+        number = 0
+        for action in sorted(percentage, key=percentage.get):
+            number += percentage[action]
+            strategy[number] = action
+            if number > 100:
+                os.system('clear')
+                print('Incorrect computer strategy.')
+                input('Press Enter to exit.')
+                sys.exit(0)
+        return strategy
+
+
+    def build_computer_strategy(self, percentage, gold):
+        """Filters possible actions. Leave only those which are affordable.
+
+        After each action computer must rebuild strategy according to gold amount.
+        If some action can't be performed because of lack of gold, it will be
+        dropped and total amount of percentage will decrease by its percentage.
+
+        Args:
+            - `percentage`: dict, represents computer strategy in percentage
+            - `gold`: int, amount of computer player's gold
+
+        Return:
+            tuple (dict, int) - (converted percentage, total percentage (<=100))
+        """
+        total_percentage = 0
+        filtered_percentage = {}
+        for action, percent in percentage.items():
+            if COSTS[action] <= gold:
+                filtered_percentage[action] = percent
+                total_percentage += percent
+        return (self.convert_percentage(filtered_percentage), total_percentage)
+
+    def choose_strategy(self, turns_to_spawn):
         """ Choose AI strategy in percentage.
 
         Build different strategies depending on situation.
+
+        Args:
+            - `turns_to_spawn`: int, count of turns to next spawn
 
         Return:
             dict, represents computer strategy in percentage
         """
         # setup basic strategy
-        percentage = {'spawn':25, 'income':40, 'unit_hp':10, 'unit_dmg':10,
-                      'unit_attack_speed':10, 'unit_regen':5}
+        percentage = {'spawn':25, 'income':45, 'unit_hp':10, 'unit_dmg':10,
+                      'unit_attack_speed':10}
 
         if self.spawns == 0:
             percentage = {'spawn':100}
+        elif self.income < 500:
+            percentage = {'income':70, 'spawn':20, 'unit_hp':5, 'unit_dmg':3,
+                          'unit_attack_speed':1, 'unit_regen':1}
         elif self.income < 5000:
             percentage = {'income':90, 'spawn':5, 'unit_hp':2, 'unit_dmg':1,
                           'unit_attack_speed':1, 'unit_regen':1}
@@ -885,6 +890,10 @@ class AIPlayer(Player):
                           'unit_dmg':10, 'unit_attack_speed':10,
                           'castle_dmg':5, 'castle_hp': 15}
 
+        # can be done if this is not spawn turn
+        if turns_to_spawn > 0:
+            percentage = {'income': 100}
+
         # castle rescue
         if self.castle.hp < CASTLE_HP:
             percentage = {'spawn':10, 'income':10, 'unit_hp':10,
@@ -902,14 +911,25 @@ class AIPlayer(Player):
                           'castle_hp':20}
         return percentage
 
-    def computer_action(self):
-        """ Perform computer action. """
-        if self.gold < 100:
+    def computer_action(self, turns_to_spawn):
+        """ Perform computer action.
+
+        Args:
+            - `turns_to_spawn`: int, count of turns to next spawn
+
+        Return:
+            bool, False if no actions can be done because of lack of gold,
+                  True - otherwise
+        """
+        prices = [SPAWN_COST]
+        prices.extend(list(UNIT_UPGRADE_PRICES.values()))
+        prices.extend(list(CASTLE_UPGRADE_PRICES.values()))
+        if self.gold < min(prices):
             return False
 
-        percentage = self.choose_strategy()
-        strategy, max_rand = build_computer_strategy(percentage,
-                                                     self.gold)
+        percentage = self.choose_strategy(turns_to_spawn)
+        strategy, max_rand = self.build_computer_strategy(percentage,
+                                                          self.gold)
 
         choice = self.random_choice(max_rand, strategy)
         if choice == 'spawn':
@@ -945,7 +965,7 @@ class AIPlayer(Player):
 
         """
         while self.is_enough_gold(turns_to_spawn):
-            success = self.computer_action()
+            success = self.computer_action(turns_to_spawn)
             if not success:
                 break
 
