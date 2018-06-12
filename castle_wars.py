@@ -880,8 +880,8 @@ class AIPlayer(Player):
                    / DISTANCE < 0.4
 
         # setup basic strategy
-        percentage = {'spawn':10, 'income':45, 'unit_hp':15, 'unit_dmg':20,
-                      'unit_attack_speed':10}
+        percentage = {'spawn':10, 'income':45, 'unit_hp':15, 'unit_dmg':15,
+                      'unit_attack_speed':10, 'unit_regen':5}
 
         enemy_stats = self.enemy.get_player_stats()
 
@@ -905,8 +905,9 @@ class AIPlayer(Player):
                           'unit_attack_speed':9, 'unit_regen':1}
         elif (self.enemy.get_unit_level() * enemy_stats['spawns'] >
               self.get_unit_upgrade_level() * self.spawns):
-            percentage = {'spawn':20, 'income':20, 'unit_hp':25,
-                          'unit_dmg':25, 'unit_attack_speed':10}
+            percentage = {'spawn':15, 'income':20, 'unit_hp':25,
+                          'unit_dmg':25, 'unit_attack_speed':10,
+                          'unit_regen':5}
 
         if self.enemy.get_unit_level() > 500 and is_enemy_close():
             percentage = {'spawn':10, 'income':45, 'unit_hp':10,
@@ -954,8 +955,10 @@ class AIPlayer(Player):
         elif self.castle.hp < CASTLE_HP and turns_to_spawn == 0:
             percentage = {'income': 10, 'spawn':20, 'unit_hp':25,
                           'unit_dmg':25, 'unit_attack_speed':20}
-        elif self.castle.hp < CASTLE_HP:
-            percentage = {'income':75, 'castle_dmg':15, 'castle_regen':10}
+        elif self.castle.hp < CASTLE_HP and self.castle_dmg == 0:
+            percentage = {'income':85, 'castle_dmg':15}
+        elif self.castle.hp < CASTLE_HP and self.castle_regen == 0:
+            percentage = {'income':85, 'castle_regen':15}
         return percentage
 
     def computer_action(self, turns_to_spawn):
