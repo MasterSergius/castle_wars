@@ -873,7 +873,9 @@ class AIPlayer(Player):
             - `turns_to_spawn`: int, count of turns to next spawn
 
         Return:
-            dict, represents computer strategy in percentage
+            tuple (dict, int): where dict represents computer strategy in
+                               percentage and int - how many times use this
+                               strategy
         """
         def is_enemy_close():
             return abs(DISTANCE - self.enemy.get_highest_army_position()) \
@@ -883,52 +885,66 @@ class AIPlayer(Player):
         percentage = {'spawn':10, 'income':45, 'unit_hp':15, 'unit_dmg':15,
                       'unit_attack_speed':10, 'unit_regen':5}
 
+        # repeat_times = 0 means maximum repeats
+        repeat_times = 1
+
         enemy_stats = self.enemy.get_player_stats()
 
         # main strategy logic selection
         if self.spawns == 0:
             percentage = {'spawn':100}
+            repeat_times = 1
         elif self.income == 0:
             percentage = {'income':100}
+            repeat_times = 1
         elif is_enemy_close():
             percentage = {'spawn':20, 'income':20, 'unit_hp':25,
                           'unit_dmg':25, 'unit_attack_speed':10}
+            repeat_times = 0
         elif (self.enemy.get_unit_level() * enemy_stats['spawns'] <
               self.get_unit_upgrade_level() * self.spawns
               and self.income < 5000):
             percentage = {'income':90, 'spawn':5, 'unit_hp':2, 'unit_dmg':1,
                           'unit_attack_speed':1, 'unit_regen':1}
+            repeat_times = (5000 - self.income) / CASTLE_UPGRADES['income']
         elif (self.enemy.get_unit_level() * enemy_stats['spawns'] <
               self.get_unit_upgrade_level() * self.spawns
               and self.income < 10000):
             percentage = {'income':60, 'spawn':10, 'unit_hp':10, 'unit_dmg':10,
                           'unit_attack_speed':9, 'unit_regen':1}
+            repeat_times = (10000 - self.income) / CASTLE_UPGRADES['income']
         elif (self.enemy.get_unit_level() * enemy_stats['spawns'] >
               self.get_unit_upgrade_level() * self.spawns):
             percentage = {'spawn':15, 'income':20, 'unit_hp':25,
                           'unit_dmg':25, 'unit_attack_speed':10,
                           'unit_regen':5}
+            repeat_times = 0
 
         if self.enemy.get_unit_level() > 500 and is_enemy_close():
             percentage = {'spawn':10, 'income':45, 'unit_hp':10,
                           'unit_dmg':10, 'unit_attack_speed':10,
                           'unit_regen':10, 'castle_hp': 5}
+            repeat_times = 0
         elif self.enemy.get_unit_level() > 1000 and is_enemy_close():
             percentage = {'spawn':20, 'income':40, 'unit_hp':10,
                           'unit_dmg':10, 'unit_attack_speed':10,
                           'castle_hp': 10}
+            repeat_times = 0
         elif self.enemy.get_unit_level() > 2000 and self.castle_dmg < 1000:
             percentage = {'spawn':20, 'income':30, 'unit_hp':10,
                           'unit_dmg':10, 'unit_attack_speed':10,
                           'castle_dmg':5, 'castle_hp': 15}
+            repeat_times = 0
         elif self.enemy.get_unit_level() > 3000:
             percentage = {'spawn':15, 'income':30, 'unit_hp':10,
                           'unit_dmg':10, 'unit_attack_speed':10,
                           'castle_dmg':10, 'castle_hp': 15}
+            repeat_times = 0
 
         # can be done if this is not spawn turn
         if turns_to_spawn > 0:
             percentage = {'income': 100}
+            repeat_times = 0
 
         # castle rescue
         if self.castle.hp < CASTLE_HP * 0.4 and turns_to_spawn > 0:
@@ -936,30 +952,38 @@ class AIPlayer(Player):
                           'unit_dmg':5, 'unit_attack_speed':5,
                           'unit_regen':5, 'castle_dmg':25, 'castle_regen':10,
                           'castle_hp':30}
+            repeat_times = 0
         elif self.castle.hp < CASTLE_HP * 0.4:
             percentage = {'spawn':10, 'income':5, 'unit_hp':15,
                           'unit_dmg':15, 'unit_attack_speed':5,
                           'unit_regen':5, 'castle_dmg':25,
                           'castle_hp':20}
+            repeat_times = 0
         elif self.castle.hp < CASTLE_HP * 0.9 and turns_to_spawn > 0:
             percentage = {'spawn':1, 'income':11, 'unit_hp':1,
                           'unit_dmg':1, 'unit_attack_speed':1,
                           'unit_regen':1, 'castle_dmg':60, 'castle_regen':19,
                           'castle_hp': 5}
+            repeat_times = 0
         elif self.castle.hp < CASTLE_HP * 0.95 and turns_to_spawn > 0:
             percentage = {'income':50, 'castle_dmg':45, 'castle_regen':5}
+            repeat_times = 0
         elif self.castle.hp < CASTLE_HP * 0.95:
             percentage = {'spawn':10, 'income':25, 'unit_hp':15,
                           'unit_dmg':15, 'unit_attack_speed':10,
                           'castle_dmg':20, 'castle_regen':5}
+            repeat_times = 0
         elif self.castle.hp < CASTLE_HP and turns_to_spawn == 0:
             percentage = {'income': 10, 'spawn':20, 'unit_hp':25,
                           'unit_dmg':25, 'unit_attack_speed':20}
+            repeat_times = 0
         elif self.castle.hp < CASTLE_HP and self.castle_dmg == 0:
             percentage = {'income':85, 'castle_dmg':15}
+            repeat_times = 0
         elif self.castle.hp < CASTLE_HP and self.castle_regen == 0:
             percentage = {'income':85, 'castle_regen':15}
-        return percentage
+            repeat_times = 0
+        return percentage, repeat_times
 
     def computer_action(self, turns_to_spawn):
         """ Perform computer action.
@@ -974,32 +998,41 @@ class AIPlayer(Player):
         prices = [SPAWN_COST]
         prices.extend(list(UNIT_UPGRADE_PRICES.values()))
         prices.extend(list(CASTLE_UPGRADE_PRICES.values()))
-        if self.gold < min(prices):
-            return False
+        min_price = min(prices)
 
-        percentage = self.choose_strategy(turns_to_spawn)
-        strategy, max_rand = self.build_computer_strategy(percentage,
-                                                          self.gold)
+        times_action_repeated = 0
 
-        choice = self.random_choice(max_rand, strategy)
-        if choice == 'spawn':
-            self.build_spawn()
-        elif choice == 'unit_hp':
-            self.upgrade_units_attr('hp')
-        elif choice == 'unit_dmg':
-            self.upgrade_units_attr('dmg')
-        elif choice == 'unit_attack_speed':
-            self.upgrade_units_attr('attack_speed')
-        elif choice == 'unit_regen':
-            self.upgrade_units_attr('regen')
-        elif choice == 'income':
-            self.upgrade_castle_attr('income')
-        elif choice == 'castle_dmg':
-            self.upgrade_castle_attr('dmg')
-        elif choice == 'castle_regen':
-            self.upgrade_castle_attr('regen')
-        elif choice == 'castle_hp':
-            self.upgrade_castle_attr('hp')
+        percentage, repeat_times = self.choose_strategy(turns_to_spawn)
+
+        while True:
+            if self.gold < min_price:
+                return False
+            strategy, max_rand = self.build_computer_strategy(percentage,
+                                                              self.gold)
+
+            choice = self.random_choice(max_rand, strategy)
+            if choice == 'spawn':
+                self.build_spawn()
+            elif choice == 'unit_hp':
+                self.upgrade_units_attr('hp')
+            elif choice == 'unit_dmg':
+                self.upgrade_units_attr('dmg')
+            elif choice == 'unit_attack_speed':
+                self.upgrade_units_attr('attack_speed')
+            elif choice == 'unit_regen':
+                self.upgrade_units_attr('regen')
+            elif choice == 'income':
+                self.upgrade_castle_attr('income')
+            elif choice == 'castle_dmg':
+                self.upgrade_castle_attr('dmg')
+            elif choice == 'castle_regen':
+                self.upgrade_castle_attr('regen')
+            elif choice == 'castle_hp':
+                self.upgrade_castle_attr('hp')
+            times_action_repeated += 1
+            if repeat_times > 0 and repeat_times == times_action_repeated:
+                break
+
         return True
 
     def is_enough_gold(self, turns_to_spawn):
